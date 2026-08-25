@@ -1,0 +1,28 @@
+name: Verify release asset
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-attach:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - name: Build exact npm tarball
+        run: npm pack
+      - name: Attach tarball to GitHub Release
+        run: gh release upload "${{ github.event.release.tag_name }}" muratkomurcu-dry-run-*.tgz --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

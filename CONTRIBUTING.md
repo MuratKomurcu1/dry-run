@@ -5,7 +5,7 @@ Thanks for helping make agent testing boring — in the good way.
 ## Dev setup
 
 ```bash
-git clone https://github.com/muratkomurcu/dry-run
+git clone https://github.com/MuratKomurcu1/dry-run
 cd dry-run
 npm install
 npm run build
@@ -38,7 +38,7 @@ examples/         Runnable example scenarios
 1. **Zero runtime dependencies.** Everything ships in the box.
 2. **Deterministic by default.** A test that passes twice and fails once is a bug in dry-run, not in flakiness.
 3. **Fail loudly, never silently.** Stale cassettes and cache misses throw with instructions, never serve wrong data.
-4. **Secrets never hit disk.** Redaction is on by default; if you find a leak path, that's a P0.
+4. **Secret-shaped values are redacted before persistence.** Redaction is defense in depth, not a substitute for reviewing cassettes before commit; a leak path is a P0.
 5. **Offline CI.** Every test in this repo runs without network access or API keys.
 
 ## Adding a feature
@@ -49,7 +49,7 @@ examples/         Runnable example scenarios
 
 ## Release checklist
 
-- [ ] `npm run build && npm test`
+- [ ] `npm run verify`
 - [ ] `node dist/cli.js run examples` green
 - [ ] Bump version in `package.json`
 - [ ] Update README badges/changelog

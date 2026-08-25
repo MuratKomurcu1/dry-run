@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title description">
+  <title id="title">dry-run — deterministic E2E tests for AI agents</title>
+  <desc id="description">Record an AI agent run once, replay it offline, and assert on the complete tool trajectory.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#080b12"/>
+      <stop offset=".55" stop-color="#101724"/>
+      <stop offset="1" stop-color="#09121a"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#8c7dff"/>
+      <stop offset="1" stop-color="#5a46e8"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#75e7b0"/>
+      <stop offset="1" stop-color="#1eaa6b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop stop-color="#7564ff" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#7564ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000" flood-opacity=".42"/>
+    </filter>
+    <style>
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <circle cx="1030" cy="110" r="390" fill="url(#glow)"/>
+  <circle cx="100" cy="650" r="280" fill="#26bd79" opacity=".055"/>
+  <path d="M0 96H1280M0 560H1280" stroke="#fff" stroke-opacity=".035"/>
+
+  <g class="sans" transform="translate(64 54)">
+    <rect width="48" height="48" rx="14" fill="url(#brand)" filter="url(#shadow)"/>
+    <path d="M15 17h18M15 24h12M15 31h18" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="34" cy="24" r="4" fill="#75e7b0"/>
+    <text x="64" y="31" fill="#f4f7fc" font-size="21" font-weight="760">dry-run</text>
+  </g>
+
+  <g class="sans" transform="translate(64 163)">
+    <text x="0" y="0" fill="#f7f9fd" font-size="45" font-weight="760" letter-spacing="-1.7">Deterministic E2E tests</text>
+    <text x="0" y="55" fill="#f7f9fd" font-size="45" font-weight="760" letter-spacing="-1.7">for AI agents.</text>
+    <text x="0" y="121" fill="#a0aabd" font-size="20">Record real LLM trajectories once. Replay every commit</text>
+    <text x="0" y="151" fill="#a0aabd" font-size="20">offline, in milliseconds, with zero provider cost.</text>
+
+    <g transform="translate(0 201)">
+      <rect width="128" height="42" rx="21" fill="#221d40" stroke="#5b4aa0"/>
+      <text x="64" y="27" text-anchor="middle" fill="#b9afff" font-size="13" font-weight="700">RECORD</text>
+      <rect x="140" width="124" height="42" rx="21" fill="#221d40" stroke="#5b4aa0"/>
+      <text x="202" y="27" text-anchor="middle" fill="#b9afff" font-size="13" font-weight="700">REPLAY</text>
+      <rect x="276" width="122" height="42" rx="21" fill="#162d24" stroke="#2f7858"/>
+      <text x="337" y="27" text-anchor="middle" fill="#79e1ae" font-size="13" font-weight="700">ASSERT</text>
+    </g>
+
+    <text x="0" y="306" fill="#717f93" font-size="14" font-weight="650">OPEN SOURCE · ZERO RUNTIME DEPENDENCIES · OFFLINE CI</text>
+  </g>
+
+  <g transform="translate(750 126)" filter="url(#shadow)">
+    <rect width="466" height="402" rx="25" fill="#141a25" stroke="#354158"/>
+    <rect x="1" y="1" width="464" height="55" rx="24" fill="#1b2230"/>
+    <circle cx="25" cy="27" r="6" fill="#ff5f57"/>
+    <circle cx="45" cy="27" r="6" fill="#febc2e"/>
+    <circle cx="65" cy="27" r="6" fill="#28c840"/>
+    <text class="sans" x="91" y="32" fill="#aeb8c8" font-size="12" font-weight="650">AGENT REGRESSION SUITE</text>
+
+    <g class="mono" transform="translate(30 89)">
+      <text x="0" y="0" fill="#8794a8" font-size="12">$ dry-run run tests --replay</text>
+      <text x="0" y="42" fill="#79e1ae" font-size="14" font-weight="700">✓ support agent refunds correctly</text>
+      <text x="20" y="70" fill="#9da9bb" font-size="12">✓ calls tool "lookup_order"</text>
+      <text x="20" y="96" fill="#9da9bb" font-size="12">✓ calls tool "issue_refund" once</text>
+      <text x="20" y="122" fill="#9da9bb" font-size="12">✓ never calls "delete_account"</text>
+      <text x="20" y="148" fill="#9da9bb" font-size="12">✓ uses at most 6 steps</text>
+
+      <rect x="0" y="181" width="406" height="54" rx="12" fill="#10251d" stroke="#2a704f"/>
+      <text x="20" y="214" fill="#79e1ae" font-size="14" font-weight="700">All 1 scenario passed · 3ms · $0</text>
+
+      <text x="0" y="275" fill="#7d8a9e" font-size="11">cassette: support-flow.json</text>
+      <path d="M0 294H406" stroke="#303c50"/>
+      <text x="0" y="324" fill="#b9afff" font-size="12">shape signature verified</text>
+      <text x="250" y="324" fill="#79e1ae" font-size="12">no network calls</text>
+    </g>
+  </g>
+</svg>

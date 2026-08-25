@@ -4,10 +4,17 @@
 Record once. Replay forever. Ship with confidence.
 
 [![npm](https://img.shields.io/npm/v/@muratkomurcu%2fdry-run)](https://www.npmjs.com/package/@muratkomurcu/dry-run)
-[![CI](https://github.com/muratkomurcu/dry-run/actions/workflows/ci.yml/badge.svg)](https://github.com/muratkomurcu/dry-run/actions)
+[![CI](https://github.com/MuratKomurcu1/dry-run/actions/workflows/ci.yml/badge.svg)](https://github.com/MuratKomurcu1/dry-run/actions)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![node](https://img.shields.io/badge/node-%3E%3D22.18-5FA04E)](package.json)
 
-<!-- TODO: replace with a real GIF of `npx @muratkomurcu/dry-run run` output -->
+<p align="center">
+  <img src="docs/assets/dry-run-terminal.gif" alt="A real dry-run CLI replay completing an agent trajectory test offline" width="100%" />
+</p>
+
+`dry-run` records provider and optional tool-boundary traffic into reviewable cassettes, then replays the same agent trajectory offline on every commit. It is an E2E regression layer—not a hosted service and not a quality score disguised as a test.
+
+**[Architecture](docs/ARCHITECTURE.md) · [Benchmarks](docs/BENCHMARKS.md) · [Evidence](docs/EVIDENCE.md) · [Security](SECURITY.md) · [Comparison](docs/COMPARISON.md)**
 
 ## The problem
 
@@ -41,9 +48,23 @@ Then assert on what actually matters:
 | `maxTokens` | token budget violations |
 | `semantic` *(opt-in)* | fuzzy quality via LLM-as-judge |
 
+## Measured replay overhead
+
+The committed implementation check runs 250 fresh single-turn cassette replayers per suite, including disk reads and a deterministic output assertion:
+
+| Measurement | Result |
+| --- | ---: |
+| 250-scenario in-process median | **2.96 ms** |
+| In-process p95 | **3.40 ms** |
+| Fresh Node process + real example CLI median | **35.23 ms** |
+| Provider network calls / provider cost | **0 / $0** |
+
+These are Apple M5, Node 26.7.0, warm-filesystem microbenchmark results—not a live-provider comparison or universal guarantee. The [methodology, raw samples, limitations, and rerun command](docs/BENCHMARKS.md) are public.
+
 ## Quickstart
 
 ```bash
+npm install --save-dev @muratkomurcu/dry-run
 npx @muratkomurcu/dry-run init     # scaffold tests/smoke.agentest.ts
 npx @muratkomurcu/dry-run run      # green in milliseconds, offline
 ```
@@ -70,7 +91,7 @@ dry-run run --watch     # re-run on every save — TDD for agents
 
 **Verified replay.** Replays are matched by conversation *shape* (roles, tool calls, tools, model) — not by exact strings. Reword a prompt and the cassette still works. Change the shape and it fails loudly with a diff instead of silently serving wrong data.
 
-**Secret-safe by default.** Cassettes are redacted before they touch disk (`sk-…`, `Bearer …`, JWTs, AWS keys, and anything stored under a key named like a credential). Commit them without fear.
+**Secret-shaped values are redacted by default.** Cassettes are filtered before they touch disk (`sk-…`, `Bearer …`, JWTs, AWS keys, and scalar values stored under credential-like keys). Redaction is defense in depth, not a guarantee: review cassettes before committing them and read the [security boundary](SECURITY.md).
 
 Cassettes are plain JSON — review them in PRs next to your prompt changes.
 
@@ -166,7 +187,7 @@ OpenAI-compatible endpoint works out of the box, including **Ollama**,
 Drop this into your workflow:
 
 ```yaml
-- uses: muratkomurcu/dry-run/.github/actions/dry-run@main
+- uses: MuratKomurcu1/dry-run/.github/actions/dry-run@v0.3.1
   with:
     paths: tests
     mode: replay          # never dial out from CI
@@ -248,6 +269,8 @@ Those are great **eval** tools. `dry-run` is an **E2E test** tool — closer to 
 | Trajectory visualization | cloud dashboards | self-contained HTML report |
 | Fails like a unit test | report-style | exit code + assertion diff + JUnit |
 
+See [Where dry-run fits](docs/COMPARISON.md) for the non-marketing version: when to use an eval framework, an observability platform, a browser E2E tool, or dry-run together.
+
 ## Roadmap
 
 - [ ] Python SDK (`pip install dry-run`)
@@ -255,6 +278,8 @@ Those are great **eval** tools. `dry-run` is an **E2E test** tool — closer to 
 - [ ] Streaming + MCP tool-call recording
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Release history and the reproducible release gate live in [CHANGELOG.md](CHANGELOG.md) and [docs/RELEASE.md](docs/RELEASE.md).
 
 ## Configuration
 

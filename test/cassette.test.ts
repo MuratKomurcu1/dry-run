@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { defineAgent } from "../src/agent.ts";
 import {
   autoCassette,
   CassetteStore,
+  currentCassetteMode,
   replayer,
 } from "../src/cassette.ts";
 import { MockProvider } from "../src/providers/mock.ts";
@@ -24,6 +25,31 @@ afterEach(() => {
 });
 
 describe("cassettes", () => {
+  it("fails closed when DRYRUN_MODE is misspelled", () => {
+    const previous = process.env.DRYRUN_MODE;
+    process.env.DRYRUN_MODE = "replaay";
+    try {
+      expect(() => currentCassetteMode()).toThrow(/Invalid DRYRUN_MODE.*replay/);
+    } finally {
+      if (previous === undefined) delete process.env.DRYRUN_MODE;
+      else process.env.DRYRUN_MODE = previous;
+    }
+  });
+
+  it("fails loudly when a cassette is corrupt", () => {
+    const dir = tmpDir();
+    writeFileSync(path.join(dir, "broken.json"), "{not-json");
+    const store = new CassetteStore(dir);
+    expect(() => store.loadSync("broken")).toThrow(/Cassette .* is invalid/);
+  });
+
+  it("fails loudly when a cassette has the wrong top-level shape", () => {
+    const dir = tmpDir();
+    writeFileSync(path.join(dir, "broken.json"), JSON.stringify({ interactions: [] }));
+    const store = new CassetteStore(dir);
+    expect(() => store.loadSync("broken")).toThrow(/expected an array/);
+  });
+
   it("replays recorded traffic deterministically", async () => {
     const dir = tmpDir();
     let calls = 0;
@@ -87,7 +113,10 @@ describe("cassettes", () => {
         "redact",
         () =>
           new MockProvider([
-            { say: "got it, key sk-live-abcd1234567890abcdef and token ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+            {
+              say:
+                "got it, key sk-live-abcd1234567890abcdef, token ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, fine-grained github_pat_1234567890abcdefghijklmnop, npm_1234567890abcdefghijklmnopqrstuv",
+            },
           ]),
         { dir },
       ),
@@ -99,6 +128,8 @@ describe("cassettes", () => {
     ));
     expect(raw).not.toContain("sk-live-abcd");
     expect(raw).not.toContain("ghp_aaaa");
+    expect(raw).not.toContain("github_pat_");
+    expect(raw).not.toContain("npm_1234");
     expect(raw).toContain("[REDACTED]");
     expect(raw).toContain("hunter2");
   });

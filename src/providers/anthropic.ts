@@ -5,6 +5,7 @@ import type {
   LLMProvider,
   ToolCall,
 } from "../types.ts";
+import { redactText } from "../cassette.ts";
 
 export interface AnthropicOptions {
   apiKey?: string;
@@ -67,7 +68,7 @@ export class AnthropicProvider implements LLMProvider {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`Anthropic API error ${res.status}: ${text.slice(0, 500)}`);
+      throw new Error(`Anthropic API error ${res.status}: ${redactText(text.slice(0, 500))}`);
     }
 
     const data = (await res.json()) as AnthropicResponseBody;

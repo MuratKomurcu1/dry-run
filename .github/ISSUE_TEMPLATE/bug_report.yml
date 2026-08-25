@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible dry-run failure
+title: "[bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include a minimal scenario and redacted cassette fragment. Never paste provider credentials or private production data.
+      render: typescript
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: CLI output
+      description: Paste the complete error with secrets removed.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: dry-run and Node.js versions
+      placeholder: "@muratkomurcu/dry-run 0.3.1, Node 22.18.0"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: macOS 26 arm64 / Ubuntu 24.04 x64
+    validations:
+      required: true

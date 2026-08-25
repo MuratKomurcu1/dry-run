@@ -6,7 +6,7 @@ branding:
 
 inputs:
   paths:
-    description: "Paths to scan for *.agentest.ts scenarios"
+    description: "Whitespace-separated paths to scan for *.agentest.{ts,js,mjs} scenarios"
     required: false
     default: "tests"
   node-version:
@@ -16,7 +16,7 @@ inputs:
   version:
     description: "dry-run package version (npm tag or semver range)"
     required: false
-    default: "latest"
+    default: "0.3.1"
   junit-path:
     description: "Where to write the JUnit XML report (empty = disabled)"
     required: false
@@ -29,15 +29,26 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
       with:
         node-version: ${{ inputs.node-version }}
     - shell: bash
       env:
         DRYRUN_MODE: ${{ inputs.mode }}
+        DRYRUN_PATHS: ${{ inputs.paths }}
+        DRYRUN_VERSION: ${{ inputs.version }}
+        DRYRUN_JUNIT_PATH: ${{ inputs.junit-path }}
       run: |
-        FLAGS=""
-        if [ -n "${{ inputs.junit-path }}" ]; then
-          FLAGS="$FLAGS --junit ${{ inputs.junit-path }}"
+        set -euo pipefail
+        case "$DRYRUN_MODE" in
+          auto|record|replay|passthrough) ;;
+          *) echo "Invalid mode: $DRYRUN_MODE" >&2; exit 2 ;;
+        esac
+
+        read -r -a dryrun_paths <<< "$DRYRUN_PATHS"
+        dryrun_args=("${dryrun_paths[@]}")
+        if [[ -n "$DRYRUN_JUNIT_PATH" ]]; then
+          dryrun_args+=(--junit "$DRYRUN_JUNIT_PATH")
         fi
-        npx -y @muratkomurcu/dry-run@${{ inputs.version }} run ${{ inputs.paths }} $FLAGS
+
+        npx -y "@muratkomurcu/dry-run@${DRYRUN_VERSION}" run "${dryrun_args[@]}"

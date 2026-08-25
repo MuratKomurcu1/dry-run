@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from "node:path";
-import { statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { discoverTestFiles, loadScenarios, runScenarios } from "./runner.ts";
 import { report } from "./reporter.ts";
@@ -56,7 +56,7 @@ Cassette modes (used by autoCassette() in your scenarios):
   record      always record fresh
   replay      never dial out; a miss throws
 
-Docs: https://github.com/muratkomurcu/dry-run
+Docs: https://github.com/MuratKomurcu1/dry-run
 `;
 
 async function main(): Promise<number> {
@@ -114,6 +114,7 @@ async function main(): Promise<number> {
 
   const cfg = loadConfig();
   if (!process.env.DRYRUN_MODE && cfg.mode) process.env.DRYRUN_MODE = cfg.mode;
+  junitPath ??= cfg.junitPath;
 
   const inputs = paths.length
     ? paths
@@ -425,9 +426,15 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-async function cmdInit(): Promise<number> {  const dir = path.join(process.cwd(), "tests");
+async function cmdInit(): Promise<number> {
+  const dir = path.join(process.cwd(), "tests");
   await mkdir(dir, { recursive: true });
   const target = path.join(dir, "smoke.agentest.ts");
+  if (existsSync(target)) {
+    console.error(` Refusing to overwrite existing ${path.relative(process.cwd(), target)}.`);
+    console.error(" Move or remove it explicitly, then run `dry-run init` again.");
+    return 1;
+  }
   await writeFile(target, TEMPLATE.trimStart());
 
   console.log("");

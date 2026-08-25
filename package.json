@@ -1,10 +1,11 @@
 {
   "name": "@muratkomurcu/dry-run",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Deterministic end-to-end testing for AI agents. Record once, replay forever.",
   "type": "module",
+  "sideEffects": false,
   "license": "MIT",
-  "author": "dry-run contributors",
+  "author": "Murat Komurcu",
   "engines": {
     "node": ">=22.18"
   },
@@ -23,13 +24,21 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "CHANGELOG.md",
+    "LICENSE",
+    "SECURITY.md",
+    "benchmarks",
+    "docs",
+    "examples",
+    "scripts/benchmark-replay.mjs"
   ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "example": "node dist/cli.js run examples",
-    "prepublishOnly": "npm run build"
+    "benchmark": "npm run build && node scripts/benchmark-replay.mjs",
+    "verify": "npm run build && npm test && npm run example && npm run benchmark -- --scenarios 100 --iterations 5",
+    "prepublishOnly": "npm run verify"
   },
   "keywords": [
     "ai",
@@ -45,8 +54,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/muratkomurcu/dry-run.git"
+    "url": "git+https://github.com/MuratKomurcu1/dry-run.git"
   },
+  "bugs": {
+    "url": "https://github.com/MuratKomurcu1/dry-run/issues"
+  },
+  "homepage": "https://github.com/MuratKomurcu1/dry-run#readme",
   "devDependencies": {
     "@types/node": "^24.0.0",
     "ai": "^7.0.78",

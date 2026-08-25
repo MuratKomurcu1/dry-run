@@ -1,4 +1,4 @@
-import { defineAgent, MockProvider, scenario } from "../../src/index.ts";
+import { defineAgent, MockProvider, scenario } from "@muratkomurcu/dry-run";
 
 const provider = new MockProvider([
   { call: "get_weather", args: { city: "Berlin" } },

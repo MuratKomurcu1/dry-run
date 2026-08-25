@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import type { ChatRequest, ChatResponse, LLMProvider } from "./types.ts";
 
@@ -23,10 +31,18 @@ export class CassetteStore {
   }
 
   loadSync(name: string): Interaction[] {
+    const file = this.#file(name);
+    if (!existsSync(file)) return [];
     try {
-      return JSON.parse(readFileSync(this.#file(name), "utf8")) as Interaction[];
-    } catch {
-      return [];
+      const parsed = JSON.parse(readFileSync(file, "utf8")) as unknown;
+      if (!Array.isArray(parsed)) {
+        throw new Error("expected an array of recorded interactions");
+      }
+      return parsed as Interaction[];
+    } catch (error) {
+      throw new Error(
+        `Cassette "${file}" is invalid: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -35,8 +51,9 @@ export class CassetteStore {
   }
 
   saveSync(name: string, interactions: Interaction[]): void {
-    mkdirSync(this.#dir, { recursive: true });
-    writeFileSync(this.#file(name), JSON.stringify(interactions, null, 2));
+    mkdirSync(this.#dir, { recursive: true, mode: 0o700 });
+    restrictMode(this.#dir, 0o700);
+    atomicWritePrivate(this.#file(name), JSON.stringify(interactions, null, 2));
   }
 
   async save(name: string, interactions: Interaction[]): Promise<void> {
@@ -52,10 +69,13 @@ export type CassetteMode = "auto" | "record" | "replay" | "passthrough";
 
 export function currentCassetteMode(): CassetteMode {
   const raw = (process.env.DRYRUN_MODE ?? "").toLowerCase();
+  if (!raw) return "auto";
   if (raw === "record" || raw === "replay" || raw === "passthrough" || raw === "auto") {
     return raw;
   }
-  return "auto";
+  throw new Error(
+    `Invalid DRYRUN_MODE "${raw}". Expected auto, record, replay, or passthrough.`,
+  );
 }
 
 export function describeRequest(req: ChatRequest): string {
@@ -82,6 +102,8 @@ const SECRET_PATTERNS: RegExp[] = [
   /\bsk-[A-Za-z0-9_-]{16,}\b/g,
   /\bghp_[A-Za-z0-9]{30,}\b/g,
   /\bgh[oius]_[A-Za-z0-9]{30,}\b/g,
+  /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g,
+  /\bnpm_[A-Za-z0-9]{30,}\b/g,
   /\bAKIA[0-9A-Z]{12,}\b/g,
   /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g,
   /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/g,
@@ -94,6 +116,10 @@ function redactString(s: string): string {
     out = out.replace(re, "[REDACTED]");
   }
   return out;
+}
+
+export function redactText(value: string): string {
+  return redactString(value);
 }
 
 export function redactDeep<T>(value: T, enabled = true): T {
@@ -197,4 +223,20 @@ export function autoCassette(
 
 function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function atomicWritePrivate(file: string, value: string): void {
+  const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    writeFileSync(temp, value, { encoding: "utf8", mode: 0o600 });
+    renameSync(temp, file);
+    restrictMode(file, 0o600);
+  } finally {
+    rmSync(temp, { force: true });
+  }
+}
+
+function restrictMode(target: string, mode: number): void {
+  if (process.platform === "win32") return;
+  chmodSync(target, mode);
 }
