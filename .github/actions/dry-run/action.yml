@@ -1,0 +1,43 @@
+name: "dry-run"
+description: "Run deterministic AI agent tests in CI with dry-run. Record once, replay forever."
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  paths:
+    description: "Paths to scan for *.agentest.ts scenarios"
+    required: false
+    default: "tests"
+  node-version:
+    description: "Node.js version to use"
+    required: false
+    default: "24"
+  version:
+    description: "dry-run package version (npm tag or semver range)"
+    required: false
+    default: "latest"
+  junit-path:
+    description: "Where to write the JUnit XML report (empty = disabled)"
+    required: false
+    default: ""
+  mode:
+    description: "Cassette mode: auto | record | replay | passthrough"
+    required: false
+    default: "replay"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - shell: bash
+      env:
+        DRYRUN_MODE: ${{ inputs.mode }}
+      run: |
+        FLAGS=""
+        if [ -n "${{ inputs.junit-path }}" ]; then
+          FLAGS="$FLAGS --junit ${{ inputs.junit-path }}"
+        fi
+        npx -y dry-run@${{ inputs.version }} run ${{ inputs.paths }} $FLAGS

@@ -1,0 +1,56 @@
+{
+  "name": "dry-run",
+  "version": "0.3.0",
+  "description": "Deterministic end-to-end testing for AI agents. Record once, replay forever.",
+  "type": "module",
+  "license": "MIT",
+  "author": "dry-run contributors",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "bin": {
+    "dry-run": "dist/cli.js",
+    "dryrun": "dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "example": "node dist/cli.js run examples",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "testing",
+    "e2e",
+    "mcp",
+    "ci",
+    "deterministic",
+    "playwright-for-agents",
+    "agent-testing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muratkomurcu/dry-run.git"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "ai": "^7.0.78",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
