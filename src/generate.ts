@@ -11,7 +11,7 @@ export function generateScenario(
   interactions: Interaction[],
   opts: GenerateOptions,
 ): string {
-  const imp = opts.importFrom ?? "dry-run";
+  const imp = opts.importFrom ?? "@muratkomurcu/dry-run";
   const system = interactions[0]?.request.messages.find((m) => m.role === "system")?.content ?? "";
   const input =
     interactions[0]?.request.messages.find((m) => m.role === "user")?.content ?? "";

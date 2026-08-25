@@ -40,4 +40,4 @@ runs:
         if [ -n "${{ inputs.junit-path }}" ]; then
           FLAGS="$FLAGS --junit ${{ inputs.junit-path }}"
         fi
-        npx -y dry-run@${{ inputs.version }} run ${{ inputs.paths }} $FLAGS
+        npx -y @muratkomurcu/dry-run@${{ inputs.version }} run ${{ inputs.paths }} $FLAGS

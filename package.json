@@ -1,5 +1,5 @@
 {
-  "name": "dry-run",
+  "name": "@muratkomurcu/dry-run",
   "version": "0.3.0",
   "description": "Deterministic end-to-end testing for AI agents. Record once, replay forever.",
   "type": "module",
@@ -52,5 +52,8 @@
     "ai": "^7.0.78",
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

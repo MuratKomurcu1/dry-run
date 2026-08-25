@@ -3,11 +3,11 @@
 **Deterministic end-to-end testing for AI agents.**
 Record once. Replay forever. Ship with confidence.
 
-[![npm](https://img.shields.io/npm/v/dry-run)](https://www.npmjs.com/package/dry-run)
+[![npm](https://img.shields.io/npm/v/@muratkomurcu%2fdry-run)](https://www.npmjs.com/package/@muratkomurcu/dry-run)
 [![CI](https://github.com/muratkomurcu/dry-run/actions/workflows/ci.yml/badge.svg)](https://github.com/muratkomurcu/dry-run/actions)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
-<!-- TODO: replace with a real GIF of `npx dry-run run` output -->
+<!-- TODO: replace with a real GIF of `npx @muratkomurcu/dry-run run` output -->
 
 ## The problem
 
@@ -44,8 +44,8 @@ Then assert on what actually matters:
 ## Quickstart
 
 ```bash
-npx dry-run init     # scaffold tests/smoke.agentest.ts
-npx dry-run run      # green in milliseconds, offline
+npx @muratkomurcu/dry-run init     # scaffold tests/smoke.agentest.ts
+npx @muratkomurcu/dry-run run      # green in milliseconds, offline
 ```
 
 ### The headline: record once, replay forever
@@ -53,7 +53,7 @@ npx dry-run run      # green in milliseconds, offline
 Wrap any provider in `autoCassette`:
 
 ```ts
-import { defineAgent, OpenAIProvider, autoCassette } from "dry-run";
+import { defineAgent, OpenAIProvider, autoCassette } from "@muratkomurcu/dry-run";
 
 const provider = autoCassette("support-flow", () => new OpenAIProvider({ model: "gpt-4o-mini" }));
 ```
@@ -77,7 +77,7 @@ Cassettes are plain JSON — review them in PRs next to your prompt changes.
 ## Slow or flaky tools? Cache them too.
 
 ```ts
-import { cachedTools } from "dry-run";
+import { cachedTools } from "@muratkomurcu/dry-run";
 
 execute: (call) => myTools[call.name](call.arguments)
 // becomes:
@@ -92,7 +92,7 @@ Drop-in model wrapper — test your real `generateText` / `streamText` pipelines
 
 ```ts
 import { generateText } from "ai";
-import { vercelAIModel, MockProvider } from "dry-run";
+import { vercelAIModel, MockProvider } from "@muratkomurcu/dry-run";
 
 const { text } = await generateText({
   model: vercelAIModel(myCassetteBackedProvider),
@@ -103,7 +103,7 @@ const { text } = await generateText({
 Write a scenario:
 
 ```ts
-import { defineAgent, scenario } from "dry-run";
+import { defineAgent, scenario } from "@muratkomurcu/dry-run";
 
 export default [
   scenario({
@@ -140,7 +140,7 @@ Bring your own loop — anything that returns a `{ steps, output }` trajectory w
 Or use the built-in ReAct harness:
 
 ```ts
-import { defineAgent, OpenAIProvider, AnthropicProvider } from "dry-run";
+import { defineAgent, OpenAIProvider, AnthropicProvider } from "@muratkomurcu/dry-run";
 
 export const gptAgent = defineAgent({
   provider: new OpenAIProvider({ model: "gpt-4o-mini" }),
@@ -176,7 +176,7 @@ Drop this into your workflow:
 Or roll your own — it's one command:
 
 ```yaml
-- run: npx dry-run run tests --replay --junit report.xml
+- run: npx @muratkomurcu/dry-run run tests --replay --junit report.xml
 ```
 
 JUnit XML plugs into GitHub test annotations, GitLab, Jenkins, and everything else.
@@ -184,7 +184,7 @@ JUnit XML plugs into GitHub test annotations, GitLab, Jenkins, and everything el
 ## Recording cassettes
 
 ```ts
-import { CassetteStore, recorder, replayer } from "dry-run";
+import { CassetteStore, recorder, replayer } from "@muratkomurcu/dry-run";
 
 const store = new CassetteStore();
 

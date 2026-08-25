@@ -323,7 +323,7 @@ async function cmdGenerate(argv: string[]): Promise<number> {
     name ?? path.basename(cassettePath).replace(/\.json$/, "").replace(/[^a-z0-9]+/gi, "-");
   const source = generateScenario(interactions, {
     scenarioName: derived,
-    importFrom: importFrom ?? "dry-run",
+    importFrom: importFrom ?? "@muratkomurcu/dry-run",
   });
 
   if (outPath) {
@@ -434,7 +434,7 @@ async function cmdInit(): Promise<number> {  const dir = path.join(process.cwd()
   console.log(` ${"✔"} Created ${path.relative(process.cwd(), target)}`);
   console.log("");
   console.log(" Next steps:");
-  console.log(`   1. Run it:        ${"npx dry-run run"}`);
+  console.log(`   1. Run it:        ${"npx @muratkomurcu/dry-run run"}`);
   console.log(`   2. Edit the scenario to match your real agent.`);
   console.log("");
   console.log(" The starter uses a MockProvider so it passes offline, instantly.");
@@ -444,7 +444,7 @@ async function cmdInit(): Promise<number> {  const dir = path.join(process.cwd()
 }
 
 const TEMPLATE = `
-import { defineAgent, MockProvider, scenario } from "dry-run";
+import { defineAgent, MockProvider, scenario } from "@muratkomurcu/dry-run";
 
 const provider = new MockProvider([
   { call: "get_weather", args: { city: "Paris" } },
