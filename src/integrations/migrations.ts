@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { redactDeep } from "../cassette.ts";
 import { Dataset, type DatasetCase, type DatasetDocument } from "../dataset.ts";
 import type { SpanRecord, SpanType, TraceDocument, TraceFeedback } from "../tracing.ts";
+import { trimHyphens } from "../safe-text.ts";
 
 export type MigrationSource = "deepeval" | "langfuse" | "braintrust";
 
@@ -133,7 +134,7 @@ function traceDocument(id: string, name: string, spans: SpanRecord[], rootSpanId
 function scoreFeedback(value: unknown, index: number): TraceFeedback { const score = requiredRecord(value, `score ${index + 1}`); const numeric = number(first(score, "value", "score")); return { id: safeId(String(score.id ?? `feedback-${index}`), "feedback"), source: "external", ...(numeric != null ? { score: Math.max(0, Math.min(1, numeric)) } : {}), ...(typeof score.name === "string" ? { label: score.name } : {}), ...(typeof score.comment === "string" ? { comment: score.comment } : {}), createdAt: timestamp(first(score, "timestamp", "createdAt")) }; }
 function normalizeTurns(value: unknown[]): any[] { return value.flatMap((turn) => { const item = record(turn); const role = String(item?.role ?? "user").toLowerCase(); if (!item || !["system", "user", "assistant", "tool"].includes(role)) return []; return [{ role, content: String(first(item, "content", "text") ?? ""), ...(typeof item.name === "string" ? { name: item.name } : {}) }]; }); }
 function spanType(value: string): SpanType { const normalized = value.toLowerCase(); if (normalized.includes("generation") || normalized.includes("llm")) return "llm"; if (normalized.includes("tool")) return "tool"; if (normalized.includes("retriev")) return "retriever"; if (normalized.includes("score")) return "scorer"; if (normalized.includes("agent")) return "agent"; if (normalized.includes("task")) return "task"; return "custom"; }
-function safeId(value: string, prefix: string): string { const normalized = value.trim().replace(/[^a-zA-Z0-9_.-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120); return normalized || `${prefix}_${createHash("sha256").update(value).digest("hex").slice(0, 16)}`; }
+function safeId(value: string, prefix: string): string { const normalized = trimHyphens(value.trim().replace(/[^a-zA-Z0-9_.-]+/g, "-")).slice(0, 120); return normalized || `${prefix}_${createHash("sha256").update(value).digest("hex").slice(0, 16)}`; }
 function timestamp(value: unknown, fallback = new Date(0).toISOString()): string { const time = typeof value === "number" ? (value > 1e14 ? value / 1e6 : value > 1e11 ? value : value * 1000) : Date.parse(String(value ?? "")); return Number.isFinite(time) ? new Date(time).toISOString() : fallback; }
 function durationMs(start: string, end: string): number { return Math.max(0, Date.parse(end) - Date.parse(start)); }
 function numericRecord(value: unknown): Record<string, number> { const result: Record<string, number> = {}; for (const [key, candidate] of Object.entries(record(value) ?? {})) if (typeof candidate === "number" && Number.isFinite(candidate) && candidate >= 0) result[key] = candidate; return result; }

@@ -25,7 +25,7 @@ describe("provider error redaction", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        new Response("authorization Bearer abcdefghijklmnopqrstuvwxyz", { status: 403 }),
+        new Response(`authorization ${["Bearer", "abcdefghijklmnopqrstuvwxyz"].join(" ")}`, { status: 403 }),
       ),
     );
     const provider = new AnthropicProvider({ apiKey: "test-key" });

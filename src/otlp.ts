@@ -1,4 +1,5 @@
 import type { SpanEvent, SpanRecord, SpanType, TraceDocument } from "./tracing.ts";
+import { isStackTraceField } from "./safe-text.ts";
 
 export interface OtlpIngestResult { traces: TraceDocument[]; spans: number; rejectedSpans: number; errors: string[] }
 
@@ -81,7 +82,7 @@ function buildSpan(traceId: string, span: Record<string, any>, resource: Record<
     id: `otelspan_${spanId}`, traceId: `otel_${traceId}`, ...(parent ? { parentId: `otelspan_${parent}` } : {}), name: text(span.name ?? "span", "OTLP span name", 512), type: semanticSpanType(rawAttributes, String(span.name ?? "")), status, startedAt, endedAt, durationMs: Math.max(0, Date.parse(endedAt) - Date.parse(startedAt)),
     ...(input !== undefined ? { input } : {}), ...(output !== undefined ? { output } : {}),
     attributes: { ...resourcePrefixed(resource), ...rawAttributes, "otel.scope.name": scope.name ?? "", "otel.span_id": spanId }, metrics, events,
-    ...(status === "error" ? { error: { name: text(exceptionAttrs["exception.type"] ?? rawAttributes["error.type"] ?? "Error", "OTLP error name", 256), message: text(statusRecord.message ?? exceptionAttrs["exception.message"] ?? rawAttributes["error.message"] ?? "OTLP span failed", "OTLP error message", 4_096), ...(typeof exceptionAttrs["exception.stacktrace"] === "string" ? { stack: exceptionAttrs["exception.stacktrace"] } : {}) } } : {}),
+    ...(status === "error" ? { error: { name: text(exceptionAttrs["exception.type"] ?? rawAttributes["error.type"] ?? "Error", "OTLP error name", 256), message: text(statusRecord.message ?? exceptionAttrs["exception.message"] ?? rawAttributes["error.message"] ?? "OTLP span failed", "OTLP error message", 4_096) } } : {}),
   };
 }
 
@@ -148,7 +149,18 @@ class ProtoReader {
   private advance(length: number): void { if (this.position + length > this.input.length) throw new Error("Truncated OTLP protobuf field"); this.position += length; }
 }
 
-function attributes(value: unknown): Record<string, unknown> { if (!Array.isArray(value)) return isRecord(value) ? structuredClone(value) : {}; const result: Record<string, unknown> = {}; for (const raw of value) { const item = asRecord(raw); if (typeof item.key === "string") result[item.key] = anyValue(item.value); } return result; }
+function attributes(value: unknown): Record<string, unknown> {
+  if (!Array.isArray(value)) {
+    if (!isRecord(value)) return {};
+    return Object.fromEntries(Object.entries(structuredClone(value)).filter(([key]) => !isStackTraceField(key)));
+  }
+  const result: Record<string, unknown> = {};
+  for (const raw of value) {
+    const item = asRecord(raw);
+    if (typeof item.key === "string" && !isStackTraceField(item.key)) result[item.key] = anyValue(item.value);
+  }
+  return result;
+}
 function anyValue(value: unknown): unknown { if (!isRecord(value)) return value; for (const key of ["stringValue", "boolValue", "doubleValue", "intValue", "bytesValue"]) if (key in value) return key === "intValue" ? safeNumber(value[key]) : value[key]; const arrayValue = asRecord(value.arrayValue); if (Array.isArray(arrayValue.values)) return arrayValue.values.map(anyValue); const kvlist = asRecord(value.kvlistValue); if (Array.isArray(kvlist.values)) return attributes(kvlist.values); return value; }
 function identifier(value: unknown, expectedLength: number, label: string): string { const result = bytesHex(value).toLowerCase(); if (!/^[a-f0-9]+$/.test(result) || result.length !== expectedLength || /^0+$/.test(result)) throw new Error(`OTLP ${label} must be ${expectedLength / 2} non-zero bytes`); return result; }
 function optionalIdentifier(value: unknown, expectedLength: number): string | undefined { if (value == null || value === "" || value instanceof Uint8Array && !value.length) return undefined; const result = bytesHex(value).toLowerCase(); if (/^0+$/.test(result)) return undefined; return identifier(result, expectedLength, "parentSpanId"); }

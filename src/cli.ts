@@ -53,6 +53,7 @@ import { createPrQualityReport, postGithubPrComment, writePrQualityReport } from
 import { distributedRuntimeFromEnv } from "./distributed-runtime.ts";
 import { DistributedWorkspaceState } from "./distributed-state.ts";
 import { DistributedRecoveryManager } from "./distributed-recovery.ts";
+import { trimTrailingSlashes } from "./safe-text.ts";
 
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
@@ -1601,7 +1602,7 @@ function asObject(value: unknown, label: string): Record<string, unknown> {
 
 function normalizeLocalBaseURL(value: string): string {
   const url = validateLocalEndpoint(value);
-  const normalized = url.toString().replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(url.toString());
   return normalized.endsWith("/v1") ? normalized : `${normalized}/v1`;
 }
 

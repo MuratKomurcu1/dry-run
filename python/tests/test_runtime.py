@@ -173,6 +173,18 @@ class RuntimeTest(unittest.TestCase):
             self.assertEqual(client.chat.completions.create(model="local")["output"], "ok")
             self.assertEqual(len(tracer.completed), 2)
 
+    def test_python_tracing_does_not_persist_stack_traces(self):
+        tracer = Tracer()
+        try:
+            with tracer.start_span("failing-operation"):
+                raise RuntimeError("safe public message")
+        except RuntimeError:
+            pass
+        trace = next(iter(tracer.completed.values()))
+        error = trace["spans"][0]["error"]
+        self.assertEqual(error, {"name": "RuntimeError", "message": "safe public message"})
+        self.assertNotIn("stack", json.dumps(trace))
+
     def test_dependency_free_team_client_uses_idempotent_trace_put(self):
         requests = []
         class Handler(BaseHTTPRequestHandler):

@@ -26,6 +26,7 @@ import {
   type JetStreamClient,
 } from "@nats-io/jetstream";
 import type { TraceDocument } from "./tracing.ts";
+import { redactUrlCredentials, trimSlashes } from "./safe-text.ts";
 
 export interface DistributedScope {
   organizationId: string;
@@ -994,7 +995,7 @@ function validateBucket(value: string): string {
   return value;
 }
 function normalizePrefix(value: string): string {
-  const normalized = value.replace(/^\/+|\/+$/g, "");
+  const normalized = trimSlashes(value);
   if (!normalized || normalized.length > 256) throw new Error("S3 artifact prefix is invalid");
   return validateObjectKey(normalized);
 }
@@ -1020,7 +1021,7 @@ function boundedInteger(value: number, minimum: number, maximum: number, label: 
 }
 function safeError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  return message.replace(/(?:postgres(?:ql)?|nats|https?):\/\/[^\s@]+@/gi, (match) => match.replace(/\/\/.*@/, "//[redacted]@")).slice(0, 500);
+  return redactUrlCredentials(message.slice(0, 2_000)).slice(0, 500);
 }
 function round(value: number): number { return Math.round(value * 100) / 100; }
 async function abortableDelay(ms: number, signal: AbortSignal): Promise<void> {

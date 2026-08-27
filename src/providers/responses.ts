@@ -1,5 +1,6 @@
 import type { ChatRequest, ChatResponse, LLMProvider, ToolCall } from "../types.ts";
 import { redactText } from "../cassette.ts";
+import { trimTrailingSlashes } from "../safe-text.ts";
 
 export interface OpenAIResponsesOptions { apiKey?: string; baseURL?: string; model?: string }
 
@@ -9,7 +10,7 @@ export class OpenAIResponsesProvider implements LLMProvider {
   #model: string;
   constructor(options: OpenAIResponsesOptions = {}) {
     this.#apiKey = options.apiKey ?? process.env.OPENAI_API_KEY ?? "";
-    this.#baseURL = (options.baseURL ?? process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1").replace(/\/+$/, "");
+    this.#baseURL = trimTrailingSlashes(options.baseURL ?? process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1");
     this.#model = options.model ?? process.env.DRYRUN_MODEL ?? "gpt-5-mini";
     if (!this.#apiKey) throw new Error("OpenAIResponsesProvider requires OPENAI_API_KEY or { apiKey }");
   }

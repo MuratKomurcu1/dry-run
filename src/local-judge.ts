@@ -1,5 +1,6 @@
 import { OpenAIProvider } from "./providers/openai.ts";
 import type { LLMProvider } from "./types.ts";
+import { trimTrailingSlashes } from "./safe-text.ts";
 
 export interface LocalJudgeProfile {
   kind: "ollama" | "openai-compatible";
@@ -82,7 +83,7 @@ export function validateLocalEndpoint(value: string): URL {
 
 function candidateFromEndpoint(value: string): { kind: "ollama" | "openai-compatible"; endpoint: string; probe: string } {
   const url = validateLocalEndpoint(value);
-  const normalized = url.toString().replace(/\/+$/, "");
+  const normalized = trimTrailingSlashes(url.toString());
   const looksOllama = url.port === "11434" || /ollama/i.test(normalized);
   if (looksOllama) {
     const origin = url.origin;

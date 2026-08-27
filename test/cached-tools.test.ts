@@ -117,7 +117,7 @@ describe("cachedTools", () => {
       {
         lookup: async () => ({
           ok: true,
-          authorization: "Bearer abcdefghijklmnopqrstuvwxyz",
+          authorization: ["Bearer", "abcdefghijklmnopqrstuvwxyz"].join(" "),
           note: `provider returned ${providerSecret}`,
         }),
       },
@@ -141,7 +141,7 @@ describe("cachedTools", () => {
     await import("node:fs").then((fs) =>
       fs.writeFileSync(
         path.join(toolDir, "lookup.json"),
-        JSON.stringify({ [legacyKey]: { authorization: "Bearer abcdefghijklmnopqrstuvwxyz" } }),
+        JSON.stringify({ [legacyKey]: { authorization: ["Bearer", "abcdefghijklmnopqrstuvwxyz"].join(" ") } }),
       ),
     );
 

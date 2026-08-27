@@ -30,7 +30,7 @@ export interface SpanRecord {
   attributes: Record<string, unknown>;
   metrics: Record<string, number>;
   events: SpanEvent[];
-  error?: { name: string; message: string; stack?: string };
+  error?: { name: string; message: string };
 }
 
 export interface TraceFeedback {
@@ -420,8 +420,8 @@ function toToolCall(span: SpanRecord): ToolCall {
   };
 }
 
-function normalizeError(error: unknown): { name: string; message: string; stack?: string } {
-  if (error instanceof Error) return { name: error.name, message: error.message, ...(error.stack ? { stack: error.stack } : {}) };
+function normalizeError(error: unknown): { name: string; message: string } {
+  if (error instanceof Error) return { name: error.name, message: error.message };
   return { name: "Error", message: String(error) };
 }
 

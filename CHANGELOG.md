@@ -2,13 +2,14 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## [0.8.0] - 2026-08-27
 
 - Remove the shared-POSIX requirement from distributed deployments with AES-256-GCM workspace snapshots, PostgreSQL advisory/CAS coordination, cold-node hydration, ephemeral Helm volumes, and a dedicated bootstrap job.
 - Add batched distributed ingestion: up to 500 traces share one immutable NDJSON artifact, one PostgreSQL transaction, and one JetStream event. A four-node one-million-trace run completed with zero indexed loss or duplicates while one application node was evicted.
 - Add serialized PostgreSQL schema migrations, JetStream dead-letter/redrive, encrypted portable distributed recovery points, artifact-copy verification, and restore-before-import behavior.
 - Add setup diagnostics, a deterministic zero-provider-cost demo workspace, and previewable/persisted DeepEval, Langfuse, and Braintrust imports to the control-plane UI and API.
 - Expand release automation to npm provenance, Python wheel publication, GHCR images, container scanning, CycloneDX SBOM, SHA-256 assets, GitHub attestations, and scheduled CodeQL using free public-repository infrastructure.
+- Replace backtracking-prone normalization and credential-redaction expressions with bounded linear scans; stop persisting runtime/OTLP stack traces and strip legacy stack fields at the authenticated API boundary.
 
 ### Free self-hosted platform expansion
 
@@ -32,8 +33,6 @@ All notable changes to this project are documented here.
 - Upgrade the Compose HA verifier from liveness-only probes to authenticated read-after-write traffic across baseline, active replica shutdown, surviving-node service, and recovery. Reports include exact transaction cardinality, failed operations/probes, and p50/p95/p99 latency without serializing the token.
 - Add idempotent trace-ID `PUT` ingestion, make quota scans tolerate concurrently completed/deleted durable jobs, and configure health-aware proxy retries for read/idempotent-write operations. The committed two-replica run completed 248/248 authenticated write/read transactions across shutdown and recovery with zero failed API operations or probes.
 - Replace unsupported TypeScript parameter-property syntax on CLI-imported modules so Node's strip-only TypeScript execution path remains covered by the real CLI suite.
-
-## [0.8.0] - 2026-08-26
 
 ### Closed-loop production evaluation
 

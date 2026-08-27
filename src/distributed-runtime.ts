@@ -1,5 +1,6 @@
 import type { PoolConfig } from "pg";
 import { DistributedOutboxRelay, DistributedTraceRepository, NatsJetStreamQueue, PostgresControlPlane, S3ArtifactStore, type S3ArtifactStoreOptions } from "./distributed.ts";
+import { redactUrlCredentials } from "./safe-text.ts";
 
 export interface DistributedRuntimeOptions {
   postgres: PoolConfig & { schema?: string };
@@ -69,4 +70,4 @@ export async function distributedRuntimeFromEnv(env: NodeJS.ProcessEnv = process
   });
 }
 function bounded(value: number, minimum: number, maximum: number, name: string): number { if (!Number.isSafeInteger(value) || value < minimum || value > maximum) throw new Error(`${name} must be an integer between ${minimum} and ${maximum}`); return value; }
-function safeError(error: unknown): string { return (error instanceof Error ? error.message : String(error)).replace(/(?:postgres(?:ql)?|nats|https?):\/\/[^\s@]+@/gi, (match) => match.replace(/\/\/.*@/, "//[redacted]@")).slice(0, 300); }
+function safeError(error: unknown): string { return redactUrlCredentials((error instanceof Error ? error.message : String(error)).slice(0, 2_000)).slice(0, 300); }

@@ -6,6 +6,7 @@ import type {
   ToolCall,
 } from "../types.ts";
 import { redactText } from "../cassette.ts";
+import { trimTrailingSlashes } from "../safe-text.ts";
 
 export interface OpenAIOptions {
   apiKey?: string;
@@ -33,11 +34,11 @@ export class OpenAIProvider implements LLMProvider {
 
   constructor(opts: OpenAIOptions = {}) {
     this.#apiKey = opts.apiKey ?? process.env.OPENAI_API_KEY ?? "";
-    this.#baseURL = (
+    this.#baseURL = trimTrailingSlashes(
       opts.baseURL ??
       process.env.OPENAI_BASE_URL ??
       "https://api.openai.com/v1"
-    ).replace(/\/+$/, "");
+    );
     this.#model =
       opts.model ?? process.env.DRYRUN_MODEL ?? "gpt-4o-mini";
     if (!this.#apiKey) {

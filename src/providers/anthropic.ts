@@ -6,6 +6,7 @@ import type {
   ToolCall,
 } from "../types.ts";
 import { redactText } from "../cassette.ts";
+import { trimTrailingSlashes } from "../safe-text.ts";
 
 export interface AnthropicOptions {
   apiKey?: string;
@@ -42,11 +43,11 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(opts: AnthropicOptions = {}) {
     this.#apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? "";
-    this.#baseURL = (
+    this.#baseURL = trimTrailingSlashes(
       opts.baseURL ??
       process.env.ANTHROPIC_BASE_URL ??
       "https://api.anthropic.com"
-    ).replace(/\/+$/, "");
+    );
     this.#model = opts.model ?? process.env.DRYRUN_MODEL ?? "claude-sonnet-4-5";
     this.#maxTokens = opts.maxTokens ?? 4096;
     if (!this.#apiKey) {

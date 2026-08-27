@@ -21,6 +21,7 @@ import type { DistributedRuntime } from "./distributed-runtime.ts";
 import type { DistributedWorkspaceState, DistributedStateStatus } from "./distributed-state.ts";
 import type { DistributedScope } from "./distributed.ts";
 import type { LLMProvider } from "./types.ts";
+import { isStackTraceField, redactUrlCredentials } from "./safe-text.ts";
 import {
   AnnotationConflictError,
   TeamAuthError,
@@ -1332,7 +1333,7 @@ function setSecurityHeaders(response: ServerResponse, secure: boolean): void {
 
 function json(response: ServerResponse, status: number, body: unknown): void {
   if (response.writableEnded) return;
-  const value = JSON.stringify(body);
+  const value = JSON.stringify(body, (key, item) => isStackTraceField(key) ? undefined : item);
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(value) });
   response.end(value);
 }
@@ -1376,7 +1377,7 @@ async function readiness(workspace: TeamWorkspace, analytics?: AnalyticsStore, d
   return { ok: workspaceOk && analyticsCheck.ok && (!distributedCheck || distributedCheck.ok), checks: { workspace: { ok: workspaceOk }, analytics: analyticsCheck, ...(distributedCheck ? { distributed: distributedCheck } : {}) } };
 }
 
-function safeRuntimeError(error: unknown): string { return (error instanceof Error ? error.message : String(error)).replace(/(?:postgres(?:ql)?|nats|https?):\/\/[^\s@]+@/gi, (value) => value.replace(/\/\/.*@/, "//[redacted]@")).slice(0, 300); }
+function safeRuntimeError(error: unknown): string { return redactUrlCredentials((error instanceof Error ? error.message : String(error)).slice(0, 2_000)).slice(0, 300); }
 
 async function runConfiguredRetention(workspace: TeamWorkspace, analytics?: AnalyticsStore): Promise<void> {
   const plans = await workspace.runConfiguredRetention();
@@ -1486,8 +1487,8 @@ function publicPage(page: { limit: number; scanned: number; hasMore: boolean; ne
 function publicErrorMessage(error: unknown, workspaceDir: string, status: number): string {
   if (status === 404) return "Resource not found";
   if (status >= 500 && !(error instanceof TeamQuotaError) && !(error instanceof BodyCapacityError)) return "Internal server error";
-  const message = error instanceof Error ? error.message : String(error);
+  const message = redactUrlCredentials((error instanceof Error ? error.message : String(error)).slice(0, 2_000)).slice(0, 500);
   if (message.includes(workspaceDir) || /(?:^|\s)(?:\/[A-Za-z0-9_.-]+){3,}/.test(message) || /[A-Za-z]:\\[^\s]+/.test(message)) return "Request could not be completed";
-  return message.slice(0, 500);
+  return message;
 }
 function publicRetentionPlan(plan: ReturnType<TeamWorkspace["planRetention"]>): Record<string, unknown> { return { projectId: plan.projectId, olderThanDays: plan.olderThanDays, cutoff: plan.cutoff, total: plan.total, counts: { traces: plan.traces.length, experiments: plan.experiments.length, completedAnnotations: plan.completedAnnotations.length } }; }

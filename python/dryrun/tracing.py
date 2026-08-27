@@ -11,7 +11,6 @@ import os
 import re
 import tempfile
 import time
-import traceback
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -76,7 +75,7 @@ class Span:
         return self
     def record_error(self, error: BaseException) -> "Span":
         self.record["status"] = "error"
-        self.record["error"] = {"name": type(error).__name__, "message": _redact(str(error))[:2_000], "stack": "".join(traceback.format_exception(error))[-8_000:]}
+        self.record["error"] = {"name": type(error).__name__, "message": _redact(str(error))[:2_000]}
         return self
     def __enter__(self) -> "Span":
         self._token = _active.set(_Context(self.tracer, self.state, self.record["id"]))
