@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dry-run.fullname" . }}
+  labels: {{- include "dry-run.labels" . | nindent 4 }}
+  annotations: {{ toYaml .Values.service.annotations | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - { name: http, port: {{ .Values.service.port }}, targetPort: http, protocol: TCP }
+  selector: {{- include "dry-run.selectorLabels" . | nindent 4 }}

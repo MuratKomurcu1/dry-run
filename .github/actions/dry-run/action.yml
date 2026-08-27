@@ -12,11 +12,11 @@ inputs:
   node-version:
     description: "Node.js version to use"
     required: false
-    default: "24"
+    default: "26"
   version:
     description: "dry-run package version (npm tag or semver range)"
     required: false
-    default: "0.3.1"
+    default: "0.8.0"
   junit-path:
     description: "Where to write the JUnit XML report (empty = disabled)"
     required: false
@@ -25,6 +25,38 @@ inputs:
     description: "Cassette mode: auto | record | replay | passthrough"
     required: false
     default: "replay"
+  concurrency:
+    description: "Maximum scenarios to run concurrently"
+    required: false
+    default: "2"
+  matching:
+    description: "Cassette request matching: exact | canonical | shape"
+    required: false
+    default: "canonical"
+  deny-network:
+    description: "Block outbound network access while replaying"
+    required: false
+    default: "true"
+  sarif-path:
+    description: "Where to write SARIF output (empty = disabled)"
+    required: false
+    default: "dry-run.sarif"
+  baseline-experiment:
+    description: "Optional baseline experiment id or JSON file for PR quality comparison"
+    required: false
+    default: ""
+  candidate-experiment:
+    description: "Optional candidate experiment id or JSON file for PR quality comparison"
+    required: false
+    default: ""
+  pr-comment:
+    description: "Create or update the Dry Run quality comment on pull requests"
+    required: false
+    default: "false"
+  quality-report-path:
+    description: "Markdown path for the experiment quality report"
+    required: false
+    default: "dry-run-quality.md"
 
 runs:
   using: "composite"
@@ -38,17 +70,59 @@ runs:
         DRYRUN_PATHS: ${{ inputs.paths }}
         DRYRUN_VERSION: ${{ inputs.version }}
         DRYRUN_JUNIT_PATH: ${{ inputs.junit-path }}
+        DRYRUN_CONCURRENCY: ${{ inputs.concurrency }}
+        DRYRUN_MATCHING: ${{ inputs.matching }}
+        DRYRUN_DENY_NETWORK: ${{ inputs.deny-network }}
+        DRYRUN_SARIF_PATH: ${{ inputs.sarif-path }}
+        DRYRUN_BASELINE_EXPERIMENT: ${{ inputs.baseline-experiment }}
+        DRYRUN_CANDIDATE_EXPERIMENT: ${{ inputs.candidate-experiment }}
+        DRYRUN_PR_COMMENT: ${{ inputs.pr-comment }}
+        DRYRUN_QUALITY_REPORT_PATH: ${{ inputs.quality-report-path }}
       run: |
         set -euo pipefail
         case "$DRYRUN_MODE" in
           auto|record|replay|passthrough) ;;
           *) echo "Invalid mode: $DRYRUN_MODE" >&2; exit 2 ;;
         esac
+        case "$DRYRUN_MATCHING" in
+          exact|canonical|shape) ;;
+          *) echo "Invalid matching mode: $DRYRUN_MATCHING" >&2; exit 2 ;;
+        esac
+        case "$DRYRUN_DENY_NETWORK" in
+          true|false) ;;
+          *) echo "deny-network must be true or false" >&2; exit 2 ;;
+        esac
+        case "$DRYRUN_PR_COMMENT" in
+          true|false) ;;
+          *) echo "pr-comment must be true or false" >&2; exit 2 ;;
+        esac
+        if [[ -n "$DRYRUN_BASELINE_EXPERIMENT" || -n "$DRYRUN_CANDIDATE_EXPERIMENT" ]]; then
+          if [[ -z "$DRYRUN_BASELINE_EXPERIMENT" || -z "$DRYRUN_CANDIDATE_EXPERIMENT" ]]; then
+            echo "baseline-experiment and candidate-experiment must be provided together" >&2; exit 2
+          fi
+        fi
+        if ! [[ "$DRYRUN_CONCURRENCY" =~ ^[1-9][0-9]*$ ]]; then
+          echo "concurrency must be a positive integer" >&2; exit 2
+        fi
 
         read -r -a dryrun_paths <<< "$DRYRUN_PATHS"
         dryrun_args=("${dryrun_paths[@]}")
         if [[ -n "$DRYRUN_JUNIT_PATH" ]]; then
           dryrun_args+=(--junit "$DRYRUN_JUNIT_PATH")
         fi
+        dryrun_args+=(--concurrency "$DRYRUN_CONCURRENCY" --match "$DRYRUN_MATCHING" --github)
+        if [[ "$DRYRUN_DENY_NETWORK" == "true" ]]; then
+          dryrun_args+=(--deny-network)
+        fi
+        if [[ -n "$DRYRUN_SARIF_PATH" ]]; then
+          dryrun_args+=(--sarif "$DRYRUN_SARIF_PATH")
+        fi
 
         npx -y "@muratkomurcu/dry-run@${DRYRUN_VERSION}" run "${dryrun_args[@]}"
+        if [[ -n "$DRYRUN_BASELINE_EXPERIMENT" ]]; then
+          quality_args=("$DRYRUN_BASELINE_EXPERIMENT" "$DRYRUN_CANDIDATE_EXPERIMENT" --output "$DRYRUN_QUALITY_REPORT_PATH")
+          if [[ "$DRYRUN_PR_COMMENT" == "true" ]]; then
+            quality_args+=(--post-comment)
+          fi
+          npx -y "@muratkomurcu/dry-run@${DRYRUN_VERSION}" pr-report "${quality_args[@]}"
+        fi

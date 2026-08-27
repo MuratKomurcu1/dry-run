@@ -1,0 +1,37 @@
+{
+  "schema": "dry-run.ha-chaos.v1",
+  "createdAt": "2026-08-27T10:58:32.761Z",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v26.7.0"
+  },
+  "configuration": {
+    "nodes": 4,
+    "traces": 1000000,
+    "batchSize": 500,
+    "concurrency": 32,
+    "injectedFault": "one application node gracefully evicted at 33% completion"
+  },
+  "result": {
+    "passed": true,
+    "accepted": 1000000,
+    "indexed": 1000000,
+    "duplicates": 0,
+    "lost": 0,
+    "retryableRequestErrors": 0,
+    "durationMs": 81990.36,
+    "tracesPerSecond": 12196.56,
+    "batchLatencyMs": {
+      "p50": 1289.24,
+      "p95": 1396.71,
+      "p99": 1453.96,
+      "max": 1550.58
+    },
+    "postFailoverReads": 3
+  },
+  "limitations": [
+    "The injected application-node fault is a graceful eviction; abrupt SIGKILL and dependency partitions are separate operator drills.",
+    "This run executed the full million-trace profile; results describe this machine and configuration, not a universal SLA."
+  ]
+}

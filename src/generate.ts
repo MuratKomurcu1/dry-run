@@ -1,4 +1,5 @@
-import type { Interaction } from "./cassette.ts";
+import type { CassetteInput, Interaction } from "./cassette.ts";
+import { parseCassette } from "./cassette.ts";
 import type { MockTurn } from "./providers/mock.ts";
 import type { ToolDef } from "./types.ts";
 
@@ -8,9 +9,10 @@ export interface GenerateOptions {
 }
 
 export function generateScenario(
-  interactions: Interaction[],
+  cassette: CassetteInput,
   opts: GenerateOptions,
 ): string {
+  const interactions = Array.isArray(cassette) ? cassette : parseCassette(cassette).interactions;
   const imp = opts.importFrom ?? "@muratkomurcu/dry-run";
   const system = interactions[0]?.request.messages.find((m) => m.role === "system")?.content ?? "";
   const input =
@@ -27,6 +29,7 @@ export function generateScenario(
   }
 
   const toolDefs = collectToolDefs(interactions);
+  const toolResults = collectToolResults(interactions);
   const toolNames = [...new Set(turns.filter((t): t is Extract<MockTurn, { call: string }> => "call" in t).map((t) => t.call))];
   const output = interactions[interactions.length - 1]?.response.text ?? "";
   const totalSteps = interactions.length + turns.filter((t) => "call" in t).length;
@@ -37,6 +40,10 @@ export function generateScenario(
   lines.push("");
   lines.push(`const provider = autoCassette(${JSON.stringify(opts.scenarioName)}, () => new MockProvider(${JSON.stringify(turns, null, 2).replace(/\n/g, "\n")}));`);
   lines.push("");
+  if (toolDefs.length) {
+    lines.push(`const recordedToolResults = ${JSON.stringify(toolResults, null, 2)};`);
+    lines.push("");
+  }
   lines.push("const agent = defineAgent({");
   lines.push("  provider,");
   if (model) lines.push(`  model: ${JSON.stringify(model)},`);
@@ -47,7 +54,12 @@ export function generateScenario(
       lines.push(`    ${JSON.stringify(t)},`);
     }
     lines.push("  ],");
-    lines.push("  execute: async () => ({ ok: true }),");
+    lines.push("  execute: async () => {");
+    lines.push("    const next = recordedToolResults.shift();");
+    lines.push("    if (!next) throw new Error(\"generated fixture exhausted its recorded tool results\");");
+    lines.push("    if (next.error) throw new Error(next.error);");
+    lines.push("    return next.result;");
+    lines.push("  },");
   }
   lines.push("});");
   lines.push("");
@@ -72,6 +84,24 @@ export function generateScenario(
   lines.push("");
 
   return lines.join("\n");
+}
+
+function collectToolResults(interactions: Interaction[]): Array<{ result?: unknown; error?: string }> {
+  const seen = new Set<string>();
+  const results: Array<{ result?: unknown; error?: string }> = [];
+  for (const interaction of interactions) {
+    for (const message of interaction.request.messages) {
+      if (message.role !== "tool" || !message.toolCallId || seen.has(message.toolCallId)) continue;
+      seen.add(message.toolCallId);
+      try {
+        const parsed = JSON.parse(message.content ?? "null") as { result?: unknown; error?: string };
+        results.push({ result: parsed?.result, ...(parsed?.error ? { error: parsed.error } : {}) });
+      } catch {
+        results.push({ result: message.content });
+      }
+    }
+  }
+  return results;
 }
 
 function collectToolDefs(interactions: Interaction[]): ToolDef[] {

@@ -6,6 +6,7 @@ import type {
   ToolCall,
 } from "../types.ts";
 import { redactText } from "../cassette.ts";
+import { trimTrailingSlashes } from "../safe-text.ts";
 
 export interface AnthropicOptions {
   apiKey?: string;
@@ -25,7 +26,8 @@ interface Block {
 
 interface AnthropicResponseBody {
   content: Block[];
-  usage?: { input_tokens: number; output_tokens: number };
+  usage?: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number };
+  stop_reason?: string;
 }
 
 interface OutgoingMessage {
@@ -41,11 +43,11 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(opts: AnthropicOptions = {}) {
     this.#apiKey = opts.apiKey ?? process.env.ANTHROPIC_API_KEY ?? "";
-    this.#baseURL = (
+    this.#baseURL = trimTrailingSlashes(
       opts.baseURL ??
       process.env.ANTHROPIC_BASE_URL ??
       "https://api.anthropic.com"
-    ).replace(/\/+$/, "");
+    );
     this.#model = opts.model ?? process.env.DRYRUN_MODEL ?? "claude-sonnet-4-5";
     this.#maxTokens = opts.maxTokens ?? 4096;
     if (!this.#apiKey) {
@@ -64,6 +66,7 @@ export class AnthropicProvider implements LLMProvider {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(this.#toBody(req)),
+      signal: req.signal,
     });
 
     if (!res.ok) {
@@ -90,8 +93,9 @@ export class AnthropicProvider implements LLMProvider {
       text: text || null,
       toolCalls,
       usage: data.usage
-        ? { inputTokens: data.usage.input_tokens, outputTokens: data.usage.output_tokens }
+        ? { inputTokens: data.usage.input_tokens, outputTokens: data.usage.output_tokens, cachedInputTokens: data.usage.cache_read_input_tokens }
         : undefined,
+      finishReason: data.stop_reason,
     };
   }
 
@@ -104,7 +108,9 @@ export class AnthropicProvider implements LLMProvider {
 
     return {
       model: req.model || this.#model,
-      max_tokens: this.#maxTokens,
+      max_tokens: req.maxTokens ?? this.#maxTokens,
+      ...(req.temperature != null ? { temperature: req.temperature } : {}),
+      ...(req.topP != null ? { top_p: req.topP } : {}),
       ...(system ? { system } : {}),
       messages: req.messages.filter((m) => m.role !== "system").map(toAnthropicMessage),
       ...(req.tools?.length

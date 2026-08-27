@@ -1,0 +1,374 @@
+{
+  "schema": "dry-run.leadership-benchmark.v1",
+  "createdAt": "2026-08-26T09:09:06.925Z",
+  "package": "@muratkomurcu/dry-run",
+  "version": "0.8.0",
+  "runtime": {
+    "node": "v26.7.0",
+    "os": "darwin 25.5.0",
+    "arch": "arm64",
+    "cpu": "Apple M5"
+  },
+  "configuration": {
+    "traceCount": 200,
+    "iterations": 7,
+    "promotionCount": 100,
+    "mutationCount": 600,
+    "replayCount": 500,
+    "bootstrapResamples": 10000,
+    "seed": 8026
+  },
+  "claims": {
+    "deterministicOfflineReplay": {
+      "definition": "Checksum-verified canonical model replay plus output assertion, with a fresh replayer per scenario and no provider call.",
+      "attempted": 3500,
+      "successful": 3500,
+      "correctnessRate": {
+        "successes": 3500,
+        "total": 3500,
+        "rate": 1,
+        "confidence95": {
+          "low": 0.998904,
+          "high": 1
+        }
+      },
+      "suiteLatencyMs": {
+        "samples": [
+          18.91,
+          18.2,
+          18.13,
+          17.69,
+          18.84,
+          17.28,
+          18.9
+        ],
+        "count": 7,
+        "min": 17.28,
+        "median": 18.2,
+        "p95": 18.91,
+        "p99": 18.91,
+        "max": 18.91
+      },
+      "scenariosPerSecond": {
+        "samples": [
+          26435.85,
+          27478.5,
+          27581.07,
+          28267.69,
+          26535.35,
+          28936.44,
+          26452.29
+        ],
+        "count": 7,
+        "min": 26435.85,
+        "median": 27478.5,
+        "p95": 28936.44,
+        "p99": 28936.44,
+        "max": 28936.44
+      },
+      "medianLatencyBootstrap95": {
+        "method": "seeded nonparametric bootstrap",
+        "resamples": 10000,
+        "low": 17.69,
+        "high": 18.9
+      },
+      "providerNetworkCalls": 0,
+      "providerCostUsd": 0
+    },
+    "productionToReviewLoop": {
+      "definition": "Persist trace, enqueue durable leased job, evaluate revisioned deterministic rule, persist result, and mine one deduplicated human-review item.",
+      "attempted": 1400,
+      "evaluated": 1400,
+      "reviewItems": 1400,
+      "successRate": {
+        "successes": 1400,
+        "total": 1400,
+        "rate": 1,
+        "confidence95": {
+          "low": 0.997264,
+          "high": 1
+        }
+      },
+      "duplicateReviewItems": 0,
+      "duplicateRate": {
+        "successes": 0,
+        "total": 1400,
+        "rate": 0,
+        "confidence95": {
+          "low": 0,
+          "high": 0.002736
+        }
+      },
+      "endToEndSuiteLatencyMs": {
+        "samples": [
+          756.78,
+          762.18,
+          764.06,
+          774.96,
+          767.77,
+          762.96,
+          760.47
+        ],
+        "count": 7,
+        "min": 756.78,
+        "median": 762.96,
+        "p95": 774.96,
+        "p99": 774.96,
+        "max": 774.96
+      },
+      "tracesPerSecond": {
+        "samples": [
+          264.28,
+          262.4,
+          261.76,
+          258.08,
+          260.49,
+          262.14,
+          263
+        ],
+        "count": 7,
+        "min": 258.08,
+        "median": 262.14,
+        "p95": 264.28,
+        "p99": 264.28,
+        "max": 264.28
+      },
+      "medianLatencyBootstrap95": {
+        "method": "seeded nonparametric bootstrap",
+        "resamples": 10000,
+        "low": 760.47,
+        "high": 767.77
+      },
+      "idempotentRerunLatencyMs": {
+        "samples": [
+          8.66,
+          8.18,
+          8.35,
+          8.41,
+          8.02,
+          8.13,
+          8.06
+        ],
+        "count": 7,
+        "min": 8.02,
+        "median": 8.18,
+        "p95": 8.66,
+        "p99": 8.66,
+        "max": 8.66
+      },
+      "providerNetworkCalls": 0,
+      "providerCostUsd": 0
+    },
+    "traceToExecutableRegression": {
+      "definition": "Convert one production trace into an attributed checksummed dataset, canonical cassette, generated executable agent test, and verified manifest.",
+      "attempted": 100,
+      "completeBundles": 100,
+      "verifiedBundles": 100,
+      "completeBundleRate": {
+        "successes": 100,
+        "total": 100,
+        "rate": 1,
+        "confidence95": {
+          "low": 0.963007,
+          "high": 1
+        }
+      },
+      "verifiedBundleRate": {
+        "successes": 100,
+        "total": 100,
+        "rate": 1,
+        "confidence95": {
+          "low": 0.963007,
+          "high": 1
+        }
+      },
+      "latencyMs": {
+        "samples": [
+          1.47,
+          0.79,
+          0.9,
+          0.9,
+          0.91,
+          0.87,
+          0.75,
+          0.82,
+          0.79,
+          0.71,
+          0.68,
+          0.69,
+          0.72,
+          0.71,
+          0.7,
+          0.7,
+          0.71,
+          0.68,
+          0.69,
+          0.68,
+          0.69,
+          0.84,
+          0.86,
+          0.86,
+          0.85,
+          0.88,
+          0.87,
+          0.7,
+          0.67,
+          0.7,
+          0.69,
+          0.78,
+          0.7,
+          0.66,
+          0.69,
+          0.68,
+          0.72,
+          0.68,
+          0.71,
+          0.78,
+          0.86,
+          0.81,
+          0.85,
+          0.74,
+          0.81,
+          0.86,
+          0.83,
+          0.85,
+          0.78,
+          0.67,
+          0.68,
+          0.69,
+          0.66,
+          0.68,
+          0.79,
+          0.75,
+          0.69,
+          0.67,
+          0.69,
+          0.67,
+          0.7,
+          0.67,
+          0.7,
+          0.69,
+          0.68,
+          0.7,
+          0.67,
+          0.82,
+          0.81,
+          0.81,
+          0.81,
+          0.82,
+          0.69,
+          0.68,
+          0.67,
+          0.68,
+          0.71,
+          0.73,
+          0.82,
+          0.8,
+          0.77,
+          0.68,
+          0.69,
+          0.67,
+          0.69,
+          0.69,
+          0.69,
+          0.71,
+          0.67,
+          0.7,
+          0.78,
+          0.86,
+          0.79,
+          0.8,
+          0.76,
+          0.68,
+          0.67,
+          0.69,
+          0.68,
+          0.69
+        ],
+        "count": 100,
+        "min": 0.66,
+        "median": 0.7,
+        "p95": 0.87,
+        "p99": 0.91,
+        "max": 1.47
+      },
+      "medianLatencyBootstrap95": {
+        "method": "seeded nonparametric bootstrap",
+        "resamples": 10000,
+        "low": 0.69,
+        "high": 0.74
+      },
+      "artifactsPerBundle": 4
+    },
+    "artifactIntegrity": {
+      "definition": "Change one persisted dataset, cassette, or generated-test payload without updating its trusted checksum, then load the regression bundle.",
+      "attempted": 600,
+      "detected": 600,
+      "detectionRate": {
+        "successes": 600,
+        "total": 600,
+        "rate": 1,
+        "confidence95": {
+          "low": 0.993638,
+          "high": 1
+        }
+      },
+      "falseNegatives": 0,
+      "byArtifact": {
+        "dataset": {
+          "attempted": 200,
+          "detected": 200,
+          "detectionRate": {
+            "successes": 200,
+            "total": 200,
+            "rate": 1,
+            "confidence95": {
+              "low": 0.981155,
+              "high": 1
+            }
+          }
+        },
+        "cassette": {
+          "attempted": 200,
+          "detected": 200,
+          "detectionRate": {
+            "successes": 200,
+            "total": 200,
+            "rate": 1,
+            "confidence95": {
+              "low": 0.981155,
+              "high": 1
+            }
+          }
+        },
+        "scenario": {
+          "attempted": 200,
+          "detected": 200,
+          "detectionRate": {
+            "successes": 200,
+            "total": 200,
+            "rate": 1,
+            "confidence95": {
+              "low": 0.981155,
+              "high": 1
+            }
+          }
+        }
+      },
+      "mutationModel": "Semantics-preserving JSON value changes for dataset/cassette; deterministic single-character source changes for generated tests."
+    }
+  },
+  "isolation": {
+    "command": "node dist/cli.js run examples --replay --deny-network",
+    "passed": true,
+    "exitCode": 0,
+    "boundaryReported": true
+  },
+  "limitations": [
+    "This is a Dry Run implementation benchmark, not a synthetic speed comparison against hosted products.",
+    "Leadership labels are limited to the exact documented workflows; they do not imply overall product, UI, adoption, or hosted-scale leadership.",
+    "Filesystem, CPU power mode, Node version, payload size, and background load affect latency and throughput.",
+    "The closed-loop fixture uses deterministic checks and one LLM span; semantic judge latency is intentionally excluded.",
+    "Wilson intervals describe observed binary correctness rates. Bootstrap intervals describe this machine's sampled medians, not universal performance."
+  ]
+}

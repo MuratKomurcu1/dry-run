@@ -1,4 +1,5 @@
-import type { Interaction } from "./cassette.ts";
+import type { CassetteInput, Interaction } from "./cassette.ts";
+import { parseCassette } from "./cassette.ts";
 
 export interface CassetteSummary {
   model: string;
@@ -20,7 +21,8 @@ export interface Drift {
   detail: string;
 }
 
-export function summarize(interactions: Interaction[]): CassetteSummary {
+export function summarize(input: CassetteInput): CassetteSummary {
+  const interactions = toInteractions(input);
   const last = interactions[interactions.length - 1];
   const toolCalls = interactions.flatMap((i) =>
     i.response.toolCalls.map((c) => ({ name: c.name, args: c.arguments })),
@@ -34,7 +36,7 @@ export function summarize(interactions: Interaction[]): CassetteSummary {
   };
 }
 
-export function diffCassette(a: Interaction[], b: Interaction[]): Drift[] {
+export function diffCassette(a: CassetteInput, b: CassetteInput): Drift[] {
   const drifts: Drift[] = [];
   const sa = summarize(a);
   const sb = summarize(b);
@@ -76,6 +78,10 @@ export function diffCassette(a: Interaction[], b: Interaction[]): Drift[] {
   }
 
   return drifts;
+}
+
+function toInteractions(input: CassetteInput): Interaction[] {
+  return Array.isArray(input) ? input : parseCassette(input).interactions;
 }
 
 function truncate(s: string, n: number): string {

@@ -1,4 +1,4 @@
-name: Verify release asset
+name: Verified multi-registry release
 
 on:
   release:
@@ -6,10 +6,23 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
 
 jobs:
-  verify-and-attach:
+  publish:
     runs-on: ubuntu-latest
+    environment: release
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/dry-run
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -18,11 +31,57 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          registry-url: https://registry.npmjs.org
+      - name: Verify tag and package versions agree
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          python_version="$(python3 -c "import tomllib; print(tomllib.load(open('python/pyproject.toml','rb'))['project']['version'])")"
+          test "${RELEASE_TAG#v}" = "$package_version"
+          test "$python_version" = "$package_version"
       - run: npm ci
       - run: npm run verify
-      - name: Build exact npm tarball
-        run: npm pack
-      - name: Attach tarball to GitHub Release
-        run: gh release upload "${{ github.event.release.tag_name }}" muratkomurcu-dry-run-*.tgz --clobber
+      - run: npm audit --audit-level=high
+      - name: Build npm, Python, SBOM, and container artifacts
+        run: |
+          npm pack
+          python3 -m pip wheel --no-deps --wheel-dir dist-python ./python
+          npm run sbom
+          docker build --pull -t "$IMAGE:$RELEASE_TAG" -t "$IMAGE:latest" .
+      - name: Scan final runtime image
+        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.67.2@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 image --timeout 15m --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$IMAGE:$RELEASE_TAG"
+      - name: Publish container to GHCR
+        run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$RELEASE_TAG"
+          docker push "$IMAGE:latest"
+          docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE:$RELEASE_TAG" > image-digest.txt
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Resolve image digest
+        id: digest
+        run: echo "digest=$(cut -d@ -f2 image-digest.txt)" >> "$GITHUB_OUTPUT"
+      - name: Attest GHCR image provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
+      - name: Publish npm package with provenance
+        if: env.NPM_TOKEN != ''
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+      - name: Publish Python wheel
+        if: env.PYPI_API_TOKEN != ''
+        run: |
+          python3 -m pip install --disable-pip-version-check 'twine==6.2.0'
+          python3 -m twine upload --non-interactive dist-python/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ env.PYPI_API_TOKEN }}
+      - name: Create release checksums
+        run: sha256sum muratkomurcu-dry-run-*.tgz dist-python/*.whl sbom.cdx.json image-digest.txt > SHA256SUMS
+      - name: Attach verified release assets
+        run: gh release upload "$RELEASE_TAG" muratkomurcu-dry-run-*.tgz dist-python/*.whl sbom.cdx.json image-digest.txt SHA256SUMS --clobber
         env:
           GH_TOKEN: ${{ github.token }}

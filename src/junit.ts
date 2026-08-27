@@ -11,13 +11,14 @@ export function writeJunit(summary: RunSummary, filePath: string): void {
         inner.push(`<failure message="${esc(r.error)}"><![CDATA[${esc(r.error)}]]></failure>`);
       } else {
         for (const a of r.assertions) {
-          if (!a.passed && !a.skipped) {
-            const msg = `${a.label} — ${a.message ?? "failed"}`;
+          if (!a.passed || (a.skipped && !r.passed)) {
+            const msg = `${a.label} — ${a.message ?? (a.skipped ? "skipped assertion is not allowed" : "failed")}`;
             inner.push(`<failure message="${esc(msg)}"/>`);
           }
         }
       }
-      return `    <testcase name="${esc(r.name)}" classname="dry-run" time="${time}">${inner.length ? "\n" + inner.join("\n") + "\n  " : ""}</testcase>`;
+      const name = r.trial && r.trial > 1 ? `${r.name} [trial ${r.trial}]` : r.name;
+      return `    <testcase name="${esc(name)}" classname="dry-run" time="${time}">${inner.length ? "\n" + inner.join("\n") + "\n  " : ""}</testcase>`;
     })
     .join("\n");
 

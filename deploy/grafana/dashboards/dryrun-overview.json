@@ -1,0 +1,50 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Healthy replicas",
+      "id": 1,
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(up{job=\"dryrun\"})", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests / second",
+      "id": 2,
+      "gridPos": { "h": 8, "w": 9, "x": 6, "y": 0 },
+      "targets": [{ "expr": "sum(rate(dryrun_http_requests_total{job=\"dryrun\"}[5m]))", "legendFormat": "requests", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 latency (ms)",
+      "id": 3,
+      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 0 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le) (rate(dryrun_http_request_duration_ms_bucket{job=\"dryrun\"}[5m])))", "legendFormat": "p95", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "5xx rate",
+      "id": 4,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{ "expr": "sum(rate(dryrun_http_request_errors_total{job=\"dryrun\"}[5m]))", "legendFormat": "5xx/s", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Active requests",
+      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{ "expr": "sum(dryrun_http_active_requests{job=\"dryrun\"})", "legendFormat": "active", "refId": "A" }]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["dry-run", "slo"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "Dry Run OSS Operations",
+  "uid": "dryrun-oss",
+  "version": 1
+}

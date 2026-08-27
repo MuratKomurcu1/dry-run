@@ -6,6 +6,7 @@ import type {
   ToolCall,
 } from "../types.ts";
 import { redactText } from "../cassette.ts";
+import { trimTrailingSlashes } from "../safe-text.ts";
 
 export interface OpenAIOptions {
   apiKey?: string;
@@ -33,11 +34,11 @@ export class OpenAIProvider implements LLMProvider {
 
   constructor(opts: OpenAIOptions = {}) {
     this.#apiKey = opts.apiKey ?? process.env.OPENAI_API_KEY ?? "";
-    this.#baseURL = (
+    this.#baseURL = trimTrailingSlashes(
       opts.baseURL ??
       process.env.OPENAI_BASE_URL ??
       "https://api.openai.com/v1"
-    ).replace(/\/+$/, "");
+    );
     this.#model =
       opts.model ?? process.env.DRYRUN_MODEL ?? "gpt-4o-mini";
     if (!this.#apiKey) {
@@ -63,6 +64,11 @@ export class OpenAIProvider implements LLMProvider {
             })),
           }
         : {}),
+      ...(req.temperature != null ? { temperature: req.temperature } : {}),
+      ...(req.topP != null ? { top_p: req.topP } : {}),
+      ...(req.maxTokens != null ? { max_completion_tokens: req.maxTokens } : {}),
+      ...(req.responseFormat ? { response_format: req.responseFormat } : {}),
+      ...(req.metadata ? { metadata: req.metadata } : {}),
     };
 
     const res = await fetch(`${this.#baseURL}/chat/completions`, {
@@ -72,6 +78,7 @@ export class OpenAIProvider implements LLMProvider {
         authorization: `Bearer ${this.#apiKey}`,
       },
       body: JSON.stringify(body),
+      signal: req.signal,
     });
 
     if (!res.ok) {
@@ -80,8 +87,8 @@ export class OpenAIProvider implements LLMProvider {
     }
 
     const data = (await res.json()) as {
-      choices: { message: OpenAIMessage }[];
-      usage?: { prompt_tokens: number; completion_tokens: number };
+      choices: { message: OpenAIMessage; finish_reason?: string }[];
+      usage?: { prompt_tokens: number; completion_tokens: number; prompt_tokens_details?: { cached_tokens?: number }; completion_tokens_details?: { reasoning_tokens?: number } };
     };
 
     const msg = data.choices[0]?.message;
@@ -98,8 +105,11 @@ export class OpenAIProvider implements LLMProvider {
         ? {
             inputTokens: data.usage.prompt_tokens,
             outputTokens: data.usage.completion_tokens,
+            cachedInputTokens: data.usage.prompt_tokens_details?.cached_tokens,
+            reasoningTokens: data.usage.completion_tokens_details?.reasoning_tokens,
           }
         : undefined,
+      finishReason: data.choices[0]?.finish_reason,
     };
   }
 }

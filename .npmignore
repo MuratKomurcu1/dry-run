@@ -1,0 +1,5 @@
+python/**/__pycache__/
+python/**/*.py[cod]
+python/build/
+python/*.egg-info/
+python/tests/

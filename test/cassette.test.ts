@@ -7,6 +7,7 @@ import {
   autoCassette,
   CassetteStore,
   currentCassetteMode,
+  redactDeep,
   replayer,
 } from "../src/cassette.ts";
 import { MockProvider } from "../src/providers/mock.ts";
@@ -25,6 +26,38 @@ afterEach(() => {
 });
 
 describe("cassettes", () => {
+  it("redacts credential fields without deleting token usage metrics", () => {
+    expect(redactDeep({
+      token: "credential",
+      accessToken: "credential",
+      api_key: "credential",
+      sessionId: "credential",
+      inputTokens: 12,
+      output_tokens: 4,
+      claimTokens: 3,
+      tokenCount: 16,
+      tokens: 16,
+      inputTokensText: "credential",
+    })).toEqual({
+      token: "[REDACTED]",
+      accessToken: "[REDACTED]",
+      api_key: "[REDACTED]",
+      sessionId: "[REDACTED]",
+      inputTokens: 12,
+      output_tokens: 4,
+      claimTokens: 3,
+      tokenCount: 16,
+      tokens: 16,
+      inputTokensText: "[REDACTED]",
+    });
+  });
+
+  it("redacts first-party team tokens embedded in ordinary text", () => {
+    const token = "drk_abcdefgh_abcdefghijklmnopqrstuvwxyzABCDEFGH123456";
+    const invitation = "dri_abcdefgh_abcdefghijklmnopqrstuvwxyzABCDEFGH123456";
+    expect(redactDeep({ message: `failed while using ${token} and ${invitation}` })).toEqual({ message: "failed while using [REDACTED] and [REDACTED]" });
+  });
+
   it("fails closed when DRYRUN_MODE is misspelled", () => {
     const previous = process.env.DRYRUN_MODE;
     process.env.DRYRUN_MODE = "replaay";
@@ -47,7 +80,7 @@ describe("cassettes", () => {
     const dir = tmpDir();
     writeFileSync(path.join(dir, "broken.json"), JSON.stringify({ interactions: [] }));
     const store = new CassetteStore(dir);
-    expect(() => store.loadSync("broken")).toThrow(/expected an array/);
+    expect(() => store.loadSync("broken")).toThrow(/unsupported cassette/);
   });
 
   it("replays recorded traffic deterministically", async () => {
@@ -108,14 +141,17 @@ describe("cassettes", () => {
 
   it("redacts secrets in both requests and responses", async () => {
     const dir = tmpDir();
+    const providerToken = ["sk", "live", "abcd1234567890abcdef"].join("-");
+    const githubToken = ["ghp", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"].join("_");
+    const fineGrainedToken = ["github", "pat", "1234567890abcdefghijklmnop"].join("_");
+    const npmToken = ["npm", "1234567890abcdefghijklmnopqrstuv"].join("_");
     const agent = defineAgent({
       provider: autoCassette(
         "redact",
         () =>
           new MockProvider([
             {
-              say:
-                "got it, key sk-live-abcd1234567890abcdef, token ghp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, fine-grained github_pat_1234567890abcdefghijklmnop, npm_1234567890abcdefghijklmnopqrstuv",
+              say: `got it, key ${providerToken}, token ${githubToken}, fine-grained ${fineGrainedToken}, ${npmToken}`,
             },
           ]),
         { dir },
@@ -143,7 +179,7 @@ describe("cassettes", () => {
     });
     await agent("first question");
 
-    const replay = replayer(new CassetteStore(dir), "shape");
+    const replay = replayer(new CassetteStore(dir), "shape", { matching: "shape" });
     await expect(
       replay.chat({
         model: "",

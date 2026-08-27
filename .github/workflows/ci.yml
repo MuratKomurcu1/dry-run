@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        node: [22, 24]
+        node: [22, 24, 26]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -25,8 +25,11 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: npm run test:python
       - name: E2E smoke — run example scenarios via CLI
-        run: node dist/cli.js run examples
+        run: node dist/cli.js run examples --replay --github --json dry-run-report.json --sarif dry-run-report.sarif
+      - name: E2E smoke — run dataset experiment via CLI
+        run: node dist/cli.js eval examples/evaluation/quality.eval.mjs --no-store
 
   benchmark-smoke:
     runs-on: ubuntu-latest
@@ -38,10 +41,71 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run benchmark -- --scenarios 100 --iterations 5 --output benchmark-ci.json
+      - run: npm run benchmark:control-plane -- --requests 250 --concurrency 16 --output control-plane-ci.json
+      - run: npm run benchmark:leadership -- --traces 25 --iterations 3 --promotions 10 --mutations 30 --replays 100 --bootstrap 1000 --output leadership-ci.json
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: replay-benchmark
-          path: benchmark-ci.json
+          name: benchmarks
+          path: |
+            benchmark-ci.json
+            control-plane-ci.json
+            leadership-ci.json
+
+  production-contracts:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.8
+        env:
+          CLICKHOUSE_DB: dryrun
+          CLICKHOUSE_USER: dryrun
+          CLICKHOUSE_PASSWORD: dryrun-test-password
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "clickhouse-client --user dryrun --password dryrun-test-password --query 'SELECT 1'"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:clickhouse
+        env:
+          DRYRUN_CLICKHOUSE_URL: http://127.0.0.1:8123
+          DRYRUN_CLICKHOUSE_USER: dryrun
+          DRYRUN_CLICKHOUSE_PASSWORD: dryrun-test-password
+      - name: Start free distributed dependencies
+        run: |
+          docker run -d --name dryrun-control-postgres -e POSTGRES_DB=dryrun -e POSTGRES_USER=dryrun -e POSTGRES_PASSWORD=dryrun-development-password -p 55432:5432 postgres:17-alpine
+          docker run -d --name dryrun-minio -e MINIO_ROOT_USER=dryrun-admin -e MINIO_ROOT_PASSWORD=dryrun-development-password -p 59000:9000 minio/minio:RELEASE.2025-07-23T15-54-02Z server /data
+          docker run -d --name dryrun-nats -p 54222:4222 -p 58222:8222 nats:2.11-alpine --jetstream --store_dir /data --http_port 8222
+          for attempt in {1..30}; do
+            if docker exec dryrun-control-postgres pg_isready -U dryrun -d dryrun >/dev/null 2>&1 && curl -fsS http://127.0.0.1:59000/minio/health/live >/dev/null && curl -fsS http://127.0.0.1:58222/healthz >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          docker logs dryrun-control-postgres
+          docker logs dryrun-minio
+          docker logs dryrun-nats
+          exit 1
+      - name: Verify PostgreSQL, MinIO, JetStream, and cross-replica contract
+        run: npm run verify:distributed -- --output distributed-ci.json
+      - name: Verify three-node load and failover smoke
+        run: npm run verify:chaos -- --nodes 3 --traces 1000 --batch-size 100 --concurrency 8 --output chaos-ci.json
+      - run: docker build -t dry-run:ci .
+      - name: Lint minimal and production Helm profiles
+        run: |
+          docker run --rm -v "$PWD:/src:ro" alpine/helm:3.18.6@sha256:c6d8088ddb279625a2e1ca3b08b22c18c946d1f65c8b810f28f1597435a1134c lint /src/deploy/helm/dry-run --set secrets.metricsToken=01234567890123456789012345678901
+          docker run --rm -v "$PWD:/src:ro" alpine/helm:3.18.6@sha256:c6d8088ddb279625a2e1ca3b08b22c18c946d1f65c8b810f28f1597435a1134c lint /src/deploy/helm/dry-run --set analytics.clickhouseUrl=https://clickhouse.example --set secrets.clickhousePassword=test --set distributed.enabled=true --set distributed.s3Endpoint=https://minio.example --set distributed.natsUrl=nats://nats.example:4222 --set secrets.postgresUrl=postgresql://dryrun:test@postgres.example/dryrun --set secrets.s3AccessKey=dryrun --set secrets.s3SecretKey=01234567890123456789012345678901 --set secrets.stateEncryptionKey=01234567890123456789012345678901 --set oidc.issuer=https://identity.example --set oidc.clientId=dryrun --set oidc.redirectUri=https://dry-run.example/callback --set secrets.oidcCookieSecret=01234567890123456789012345678901 --set scim.enabled=true --set secrets.scimToken=01234567890123456789012345678901 --set secrets.metricsToken=01234567890123456789012345678901 --set ingress.enabled=true --set metrics.serviceMonitor.enabled=true
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: distributed-contract
+          path: |
+            distributed-ci.json
+            chaos-ci.json
 
   package:
     runs-on: ubuntu-latest
@@ -53,4 +117,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - run: npm audit --audit-level=high
+      - run: npm run sbom
+      - run: node -e "const b=require('./sbom.cdx.json'); if(b.bomFormat!=='CycloneDX'||!b.components.length) process.exit(1)"
+      - run: python3 -m pip wheel --no-deps --wheel-dir dist-python ./python
       - run: npm pack --dry-run

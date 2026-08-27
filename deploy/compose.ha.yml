@@ -1,0 +1,289 @@
+name: dryrun-oss
+
+x-dryrun-service: &dryrun-service
+  build:
+    context: ..
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  command:
+    - team
+    - serve
+    - --dir
+    - /data/team
+    - --host
+    - 0.0.0.0
+    - --port
+    - "4320"
+    - --allow-insecure-remote
+    - --clickhouse-allow-insecure-http
+    - --oidc-allow-insecure
+    - --oidc-insecure-cookies
+    - --no-open
+  environment: &dryrun-environment
+    DRYRUN_CLICKHOUSE_URL: http://clickhouse:8123
+    DRYRUN_CLICKHOUSE_DATABASE: dryrun
+    DRYRUN_CLICKHOUSE_USER: dryrun
+    DRYRUN_CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD}
+    DRYRUN_POSTGRES_URL: postgresql://dryrun:${DRYRUN_DB_PASSWORD:?set DRYRUN_DB_PASSWORD}@control-postgres:5432/dryrun
+    DRYRUN_S3_ENDPOINT: http://minio:9000
+    DRYRUN_S3_BUCKET: dryrun-artifacts
+    DRYRUN_S3_ACCESS_KEY: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+    DRYRUN_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+    DRYRUN_S3_TLS: "false"
+    DRYRUN_S3_FORCE_PATH_STYLE: "true"
+    DRYRUN_S3_CREATE_BUCKET: "true"
+    DRYRUN_NATS_URL: nats://nats:4222
+    DRYRUN_NATS_REPLICAS: "1"
+    DRYRUN_STATE_ENCRYPTION_KEY: ${DRYRUN_STATE_ENCRYPTION_KEY:?set DRYRUN_STATE_ENCRYPTION_KEY}
+    DRYRUN_WORKSPACE_ALIAS: ${DRYRUN_WORKSPACE_ALIAS:-default}
+    DRYRUN_OIDC_ISSUER: http://quality.localhost:8080/realms/dryrun
+    DRYRUN_OIDC_CLIENT_ID: dryrun
+    DRYRUN_OIDC_REDIRECT_URI: http://quality.localhost:8080/api/v1/auth/oidc/callback
+    DRYRUN_OIDC_COOKIE_SECRET: ${DRYRUN_OIDC_COOKIE_SECRET:?set DRYRUN_OIDC_COOKIE_SECRET}
+    DRYRUN_OIDC_GROUPS_CLAIM: groups
+    DRYRUN_OIDC_ROLE_MAPPINGS: '[{"group":"/dryrun-admins","role":"admin"},{"group":"/dryrun-editors","role":"editor"},{"group":"/dryrun-viewers","role":"viewer"}]'
+    DRYRUN_OIDC_DEFAULT_ROLE: viewer
+    DRYRUN_METRICS_TOKEN: ${DRYRUN_METRICS_TOKEN:?set DRYRUN_METRICS_TOKEN}
+    DRYRUN_GRACEFUL_SHUTDOWN_MS: "30000"
+  expose:
+    - "4320"
+  depends_on:
+    clickhouse:
+      condition: service_healthy
+    control-postgres:
+      condition: service_healthy
+    minio:
+      condition: service_healthy
+    nats:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4320/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)})"]
+    interval: 10s
+    timeout: 3s
+    retries: 6
+    start_period: 20s
+  stop_grace_period: 35s
+  networks:
+    - dryrun
+
+services:
+  dryrun-init:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command: ["team", "init", "--dir", "/data/team", "--name", "${DRYRUN_WORKSPACE_NAME:-AI Quality}"]
+    environment: *dryrun-environment
+    volumes:
+      - dryrun-seed-data:/data
+    depends_on:
+      control-postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    profiles: ["tools"]
+    networks: [dryrun]
+
+  dryrun-a:
+    <<: *dryrun-service
+    volumes:
+      - dryrun-a-cache:/data
+
+  dryrun-b:
+    <<: *dryrun-service
+    volumes:
+      - dryrun-b-cache:/data
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      dryrun-a:
+        condition: service_healthy
+      dryrun-b:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    networks:
+      dryrun:
+        aliases:
+          - quality.localhost
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.8
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: dryrun
+      CLICKHOUSE_USER: dryrun
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    expose:
+      - "8123"
+      - "9000"
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user dryrun --password \"$$CLICKHOUSE_PASSWORD\" --query 'SELECT 1' >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [dryrun]
+
+  control-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dryrun
+      POSTGRES_USER: dryrun
+      POSTGRES_PASSWORD: ${DRYRUN_DB_PASSWORD:?set DRYRUN_DB_PASSWORD}
+    volumes:
+      - control-db:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dryrun -d dryrun"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [dryrun]
+
+  minio:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "127.0.0.1:59000:9000"
+      - "127.0.0.1:59001:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [dryrun]
+
+  nats:
+    image: nats:2.11-alpine
+    restart: unless-stopped
+    command: ["--jetstream", "--store_dir", "/data", "--http_port", "8222"]
+    volumes:
+      - nats-data:/data
+    ports:
+      - "127.0.0.1:54222:4222"
+      - "127.0.0.1:58222:8222"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8222/healthz | grep -q ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [dryrun]
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - keycloak-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [dryrun]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    restart: unless-stopped
+    command: ["start", "--http-enabled=true", "--hostname=http://quality.localhost:8080", "--proxy-headers=xforwarded", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/dryrun-realm.json:/opt/keycloak/data/import/dryrun-realm.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8080"
+      - "9000"
+    networks: [dryrun]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ${DRYRUN_METRICS_TOKEN_FILE:?set DRYRUN_METRICS_TOKEN_FILE}:/run/secrets/dryrun_metrics_token:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      dryrun-a:
+        condition: service_healthy
+      dryrun-b:
+        condition: service_healthy
+    networks: [dryrun]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    networks: [dryrun]
+
+  grafana:
+    image: grafana/grafana-oss:12.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+    networks: [dryrun]
+
+networks:
+  dryrun:
+
+volumes:
+  dryrun-seed-data:
+  dryrun-a-cache:
+  dryrun-b-cache:
+  clickhouse-data:
+  control-db:
+  minio-data:
+  nats-data:
+  keycloak-db:
+  prometheus-data:
+  alertmanager-data:
+  grafana-data:

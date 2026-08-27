@@ -1,0 +1,35 @@
+{
+  "schema": "dry-run.distributed-verification.v1",
+  "createdAt": "2026-08-26T11:00:16.064Z",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v26.7.0"
+  },
+  "health": {
+    "ok": true,
+    "postgres": {
+      "latencyMs": 4.72
+    },
+    "artifacts": {
+      "latencyMs": 1.52
+    },
+    "queue": {
+      "latencyMs": 0.65
+    }
+  },
+  "checks": {
+    "postgresRevisions": true,
+    "staleWriteRejected": true,
+    "idempotentTraceWrite": true,
+    "concurrentIdempotentWrite": true,
+    "minioChecksumRoundTrip": true,
+    "crossReplicaRead": true,
+    "pagination": true,
+    "jetStreamDelivery": true,
+    "jetStreamOnlineEvaluation": true,
+    "crossReplicaHttp": true,
+    "distributedReadiness": true
+  },
+  "traceId": "trace-mt9zfrod_bum8ra"
+}
