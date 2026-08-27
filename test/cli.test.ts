@@ -221,8 +221,9 @@ describe("CLI safety and configuration", () => {
     expect(workflow).toContain("IMAGE: ghcr.io/muratkomurcu1/dry-run");
     expect(workflow).not.toContain("IMAGE: ghcr.io/${{ github.repository_owner }}/dry-run");
     expect(workflow).toContain("platforms: linux/amd64,linux/arm64");
-    expect(workflow).toContain("docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130");
-    expect(workflow).toContain("docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8");
+    expect(workflow).toContain("docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8");
+    expect(workflow).toContain("docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e");
+    expect(workflow).toContain("docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a");
     expect(workflow).toContain("dry-run-trivy-cache:/root/.cache/trivy");
     expect(workflow).toContain("IMAGE_DIGEST: ${{ steps.image.outputs.digest }}");
     expect(workflow).toContain('["linux/amd64", "linux/arm64"]');
