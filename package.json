@@ -1,6 +1,6 @@
 {
   "name": "@muratkomurcu/dry-run",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Local-first evaluation, tracing, and deterministic end-to-end testing for AI agents.",
   "type": "module",
   "sideEffects": false,

@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## [0.8.1] - 2026-08-27
+
+- Publish native `linux/amd64` and `linux/arm64` GHCR images from one verified manifest, scan both architectures with Trivy, and attest the final multi-architecture digest.
+- Add standard `dry-run --version`, `dry-run -v`, and `dry-run version` commands and verify them from the packaged CLI.
+
 ## [0.8.0] - 2026-08-27
 
 - Remove the shared-POSIX requirement from distributed deployments with AES-256-GCM workspace snapshots, PostgreSQL advisory/CAS coordination, cold-node hydration, ephemeral Helm volumes, and a dedicated bootstrap job.

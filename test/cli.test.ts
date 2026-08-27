@@ -27,6 +27,15 @@ afterEach(() => {
 });
 
 describe("CLI safety and configuration", () => {
+  it("reports the installed package version through standard CLI flags", () => {
+    const dir = tmpDir();
+    for (const flag of ["--version", "-v", "version"]) {
+      const result = cli(dir, [flag]);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout.trim()).toBe("0.8.1");
+    }
+  });
+
   it("init refuses to overwrite an existing starter", () => {
     const dir = tmpDir();
     const first = cli(dir, ["init"]);
@@ -210,5 +219,11 @@ describe("CLI safety and configuration", () => {
     expect(workflow).not.toContain('gh release upload "${{ github.event.release.tag_name }}"');
     expect(workflow).toContain("IMAGE: ghcr.io/muratkomurcu1/dry-run");
     expect(workflow).not.toContain("IMAGE: ghcr.io/${{ github.repository_owner }}/dry-run");
+    expect(workflow).toContain("platforms: linux/amd64,linux/arm64");
+    expect(workflow).toContain("docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130");
+    expect(workflow).toContain("docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8");
+    expect(workflow).toContain("dry-run-trivy-cache:/root/.cache/trivy");
+    expect(workflow).toContain("IMAGE_DIGEST: ${{ steps.image.outputs.digest }}");
+    expect(workflow).toContain('["linux/amd64", "linux/arm64"]');
   });
 });
