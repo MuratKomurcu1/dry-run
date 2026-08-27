@@ -38,7 +38,7 @@ export function generateScenario(
   const lines: string[] = [];
   lines.push(`import { defineAgent, MockProvider, autoCassette, scenario } from ${JSON.stringify(imp)};`);
   lines.push("");
-  lines.push(`const provider = autoCassette(${JSON.stringify(opts.scenarioName)}, () => new MockProvider(${JSON.stringify(turns, null, 2).replace(/\n/g, "\n")}));`);
+  lines.push(`const provider = autoCassette(${JSON.stringify(opts.scenarioName)}, () => new MockProvider(${JSON.stringify(turns, null, 2)}));`);
   lines.push("");
   if (toolDefs.length) {
     lines.push(`const recordedToolResults = ${JSON.stringify(toolResults, null, 2)};`);

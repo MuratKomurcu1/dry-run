@@ -4,9 +4,12 @@ import { TEAM_STUDIO_HTML } from "../src/team-ui.ts";
 
 describe("team control-plane UI", () => {
   it("ships parseable inline JavaScript for governance, intelligence, judges, and review programs", () => {
-    const match = /<script>([\s\S]*)<\/script>/.exec(TEAM_STUDIO_HTML);
-    expect(match).not.toBeNull();
-    expect(() => new Script(match![1], { filename: "dry-run-team-ui.js" })).not.toThrow();
+    const start = TEAM_STUDIO_HTML.indexOf("<script>");
+    const end = TEAM_STUDIO_HTML.lastIndexOf("</script>");
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const script = TEAM_STUDIO_HTML.slice(start + "<script>".length, end);
+    expect(() => new Script(script, { filename: "dry-run-team-ui.js" })).not.toThrow();
     expect(TEAM_STUDIO_HTML).toContain("Quality monitors");
     expect(TEAM_STUDIO_HTML).toContain("Krippendorff");
     expect(TEAM_STUDIO_HTML).toContain("Production intelligence");

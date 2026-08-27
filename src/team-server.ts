@@ -1172,7 +1172,7 @@ async function routeRequest(workspace: TeamWorkspace, request: IncomingMessage, 
     return json(response, 405, { error: "Method not allowed" });
   } catch (error) {
     if (error instanceof ScimError || (request.url ?? "").startsWith("/scim/v2/")) {
-      const scimError = error instanceof ScimError ? error : new ScimError(undefined, publicErrorMessage(error, workspace.dir, 400), 400);
+      const scimError = error instanceof ScimError ? error : new ScimError(undefined, publicErrorMessage(400), 400);
       return scimJson(response, scimError.status, scimError.body());
     }
     const status = error instanceof TeamAuthError ? error.status
@@ -1186,7 +1186,7 @@ async function routeRequest(workspace: TeamWorkspace, request: IncomingMessage, 
       : isNotFound(error) ? 404
       : 400;
     return json(response, status, {
-      error: publicErrorMessage(error, workspace.dir, status),
+      error: publicErrorMessage(status),
       ...(error instanceof AnnotationConflictError ? { currentRevision: error.currentRevision } : {}),
       ...(error instanceof ObjectAccessConflictError ? { currentRevision: error.currentRevision } : {}),
       ...(error instanceof TeamQuotaError ? { usage: error.usage, projected: error.projected, quota: error.quota } : {}),
@@ -1484,11 +1484,14 @@ function onlineProcessor(context: RouteContext, stores: TeamProjectStores): Onli
   return processor;
 }
 function publicPage(page: { limit: number; scanned: number; hasMore: boolean; nextCursor?: string }): Record<string, unknown> { return { limit: page.limit, scanned: page.scanned, hasMore: page.hasMore, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) }; }
-function publicErrorMessage(error: unknown, workspaceDir: string, status: number): string {
+function publicErrorMessage(status: number): string {
+  if (status === 400) return "Invalid request";
+  if (status === 401) return "Authentication failed";
+  if (status === 403) return "Access denied";
   if (status === 404) return "Resource not found";
-  if (status >= 500 && !(error instanceof TeamQuotaError) && !(error instanceof BodyCapacityError)) return "Internal server error";
-  const message = redactUrlCredentials((error instanceof Error ? error.message : String(error)).slice(0, 2_000)).slice(0, 500);
-  if (message.includes(workspaceDir) || /(?:^|\s)(?:\/[A-Za-z0-9_.-]+){3,}/.test(message) || /[A-Za-z]:\\[^\s]+/.test(message)) return "Request could not be completed";
-  return message;
+  if (status === 409) return "Resource revision conflict";
+  if (status === 413) return "Request body is too large";
+  if (status === 507) return "Project storage quota exceeded";
+  return "Internal server error";
 }
 function publicRetentionPlan(plan: ReturnType<TeamWorkspace["planRetention"]>): Record<string, unknown> { return { projectId: plan.projectId, olderThanDays: plan.olderThanDays, cutoff: plan.cutoff, total: plan.total, counts: { traces: plan.traces.length, experiments: plan.experiments.length, completedAnnotations: plan.completedAnnotations.length } }; }

@@ -1,5 +1,6 @@
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { sanitizeMarkdownText } from "./safe-text.ts";
 import type { RunSummary, ScenarioResult } from "./types.ts";
 
 export function writeJsonReport(file: string, summary: RunSummary): void {
@@ -53,4 +54,4 @@ function writePrivate(file: string, value: string): void {
 }
 
 function escapeCommand(value: string): string { return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A"); }
-function escapeMarkdown(value: string): string { return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " "); }
+function escapeMarkdown(value: string): string { return sanitizeMarkdownText(value, { escapeTable: true }); }
