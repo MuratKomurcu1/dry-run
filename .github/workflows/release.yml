@@ -108,7 +108,11 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ env.PYPI_API_TOKEN }}
       - name: Create release checksums
-        run: sha256sum muratkomurcu-dry-run-*.tgz dist-python/*.whl sbom.cdx.json image-digest.txt > SHA256SUMS
+        run: |
+          sha256sum muratkomurcu-dry-run-*.tgz sbom.cdx.json image-digest.txt > SHA256SUMS
+          # GitHub release uploads flatten the wheel into the asset root. Record
+          # the same basename so `shasum -a 256 -c SHA256SUMS` works as downloaded.
+          (cd dist-python && sha256sum *.whl) >> SHA256SUMS
       - name: Attach verified release assets
         run: gh release upload "$RELEASE_TAG" muratkomurcu-dry-run-*.tgz dist-python/*.whl sbom.cdx.json image-digest.txt SHA256SUMS --clobber
         env:

@@ -226,6 +226,8 @@ describe("CLI safety and configuration", () => {
     expect(workflow).toContain("dry-run-trivy-cache:/root/.cache/trivy");
     expect(workflow).toContain("IMAGE_DIGEST: ${{ steps.image.outputs.digest }}");
     expect(workflow).toContain('["linux/amd64", "linux/arm64"]');
+    expect(workflow).toContain("(cd dist-python && sha256sum *.whl) >> SHA256SUMS");
+    expect(workflow).not.toContain("sha256sum muratkomurcu-dry-run-*.tgz dist-python/*.whl");
     expect(workflow).toContain("timeout-minutes: 45");
     expect(dockerfile).toContain("FROM --platform=$BUILDPLATFORM node:22-alpine AS build");
   });
