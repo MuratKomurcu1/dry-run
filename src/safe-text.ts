@@ -67,3 +67,39 @@ export function isStackTraceField(key: string): boolean {
   const normalized = key.toLowerCase();
   return normalized === "stack" || normalized === "stacktrace" || normalized === "exception.stacktrace" || normalized === "error.stack";
 }
+
+export interface MarkdownTextOptions {
+  escapeTable?: boolean;
+  neutralizeMentions?: boolean;
+  code?: boolean;
+  maxLength?: number;
+}
+
+/**
+ * Produces single-line Markdown without regex backtracking or partial escaping.
+ * Backslashes are escaped before table separators so an input backslash cannot
+ * cancel an escape inserted by this function.
+ */
+export function sanitizeMarkdownText(value: string, options: MarkdownTextOptions = {}): string {
+  const limit = options.maxLength == null ? Number.MAX_SAFE_INTEGER : Math.max(0, options.maxLength);
+  let output = "";
+  for (let index = 0; index < value.length && output.length < limit; index += 1) {
+    const character = value[index];
+    let replacement: string;
+    if (character === "\r" || character === "\n") {
+      if (character === "\r" && value[index + 1] === "\n") index += 1;
+      replacement = " ";
+    } else if (options.code && character === "`") {
+      replacement = "'";
+    } else if (options.neutralizeMentions && character === "@") {
+      replacement = "@\u200b";
+    } else if (options.escapeTable && (character === "\\" || character === "|")) {
+      replacement = `\\${character}`;
+    } else {
+      replacement = character;
+    }
+    if (output.length + replacement.length > limit) break;
+    output += replacement;
+  }
+  return output;
+}

@@ -6,7 +6,7 @@ import { S3ArtifactStore } from "../src/distributed.ts";
 import { migrateEvaluationExport } from "../src/integrations/migrations.ts";
 import { otlpToDryRunTraces } from "../src/otlp.ts";
 import { OpenAIProvider } from "../src/providers/openai.ts";
-import { redactUrlCredentials, trimHyphens, trimSlashes, trimTrailingSlashes } from "../src/safe-text.ts";
+import { redactUrlCredentials, sanitizeMarkdownText, trimHyphens, trimSlashes, trimTrailingSlashes } from "../src/safe-text.ts";
 import { startTeamServer, type TeamServerHandle } from "../src/team-server.ts";
 import { TeamWorkspace } from "../src/team.ts";
 import { InMemoryTraceExporter, Tracer, type TraceDocument } from "../src/tracing.ts";
@@ -37,6 +37,12 @@ describe("security regressions", () => {
     expect(redacted).toBe("postgresql://[redacted]@db.internal/app and NATS://[redacted]@queue.internal:4222");
     expect(redacted).not.toContain("secret");
     expect(redactUrlCredentials("request to https://api.example.test/v1 failed")).toBe("request to https://api.example.test/v1 failed");
+  });
+
+  it("escapes every Markdown table delimiter without allowing backslash cancellation", () => {
+    expect(sanitizeMarkdownText("a\\|b|c\r\n@team", { escapeTable: true, neutralizeMentions: true }))
+      .toBe("a\\\\\\|b\\|c @\u200bteam");
+    expect(sanitizeMarkdownText("||||", { escapeTable: true, maxLength: 3 })).toBe("\\|");
   });
 
   it("normalizes long provider and migration inputs without regex backtracking", async () => {
@@ -94,5 +100,13 @@ describe("security regressions", () => {
     expect(text).not.toContain("PRIVATE_STACK_SENTINEL");
     expect(text).not.toContain('"stack"');
     expect(text).toContain('"message":"public"');
+
+    const malformed = await fetch(`${server.url}/api/v1/projects/default/traces`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${admin.token}`, "Content-Type": "application/json" },
+      body: "{not-json",
+    });
+    expect(malformed.status).toBe(400);
+    expect(await malformed.json()).toEqual({ error: "Invalid request" });
   });
 });

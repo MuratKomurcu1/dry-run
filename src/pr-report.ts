@@ -1,6 +1,7 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { atomicWritePrivate } from "./storage.ts";
 import { compareExperiments, type ExperimentComparison, type ExperimentDocument } from "./experiment.ts";
+import { sanitizeMarkdownText } from "./safe-text.ts";
 
 const COMMENT_MARKER = "<!-- dry-run-quality-report -->";
 
@@ -97,8 +98,8 @@ function pullRequestFromEvent(file: string | undefined): number | undefined {
     return isRecord(event) && isRecord(event.pull_request) && typeof event.pull_request.number === "number" ? event.pull_request.number : undefined;
   } catch { return undefined; }
 }
-function safe(value: unknown): string { return String(value ?? "").replace(/\|/g, "\\|").replace(/@/g, "@\u200b").replace(/[\r\n]+/g, " ").slice(0, 500); }
-function safeCode(value: unknown): string { return String(value ?? "").replace(/`/g, "'").replace(/[\r\n]+/g, " ").slice(0, 160); }
+function safe(value: unknown): string { return sanitizeMarkdownText(String(value ?? ""), { escapeTable: true, neutralizeMentions: true, maxLength: 500 }); }
+function safeCode(value: unknown): string { return sanitizeMarkdownText(String(value ?? ""), { code: true, maxLength: 160 }); }
 function signed(value: number, suffix = "", digits = 2): string { const normalized = Math.abs(value) < 10 ** -(digits + 1) ? 0 : value; return `${normalized > 0 ? "+" : ""}${normalized.toFixed(Number.isInteger(value) && !suffix ? 0 : digits)}${suffix}`; }
 function formatMs(value: number): string { return `${Math.round(value)}ms`; }
 function formatNumber(value: number): string { return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value); }

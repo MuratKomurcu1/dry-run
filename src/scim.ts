@@ -173,7 +173,7 @@ function parseScimUser(value: unknown, defaultRole: Exclude<TeamRole, "ingest">,
   if (!isRecord(value)) throw new ScimError("invalidSyntax", "SCIM user must be an object", 400);
   const primaryEmail = Array.isArray(value.emails) ? value.emails.find((entry: unknown) => isRecord(entry) && entry.primary === true) ?? value.emails[0] : undefined;
   const email = String(value.userName ?? (isRecord(primaryEmail) ? primaryEmail.value : "")).trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ScimError("invalidValue", "SCIM userName must be an email address", 400);
+  if (!isScimEmail(email)) throw new ScimError("invalidValue", "SCIM userName must be an email address", 400);
   const name = String(value.displayName ?? (isRecord(value.name) ? value.name.formatted : "") ?? email).trim() || email;
   if (name.length > 128) throw new ScimError("invalidValue", "SCIM displayName is too long", 400);
   const roleValue = Array.isArray(value.roles) && isRecord(value.roles[0]) ? value.roles[0].value : defaultRole;
@@ -197,6 +197,19 @@ function applyPatchOperation(document: Record<string, unknown>, operation: unkno
   }
   if (path === `${DRYRUN_USER_SCHEMA}:projectIds`) (document[DRYRUN_USER_SCHEMA] as Record<string, unknown>).projectIds = operation.value;
   else document[path] = operation.value;
+}
+
+function isScimEmail(value: string): boolean {
+  if (value.length < 3 || value.length > 320) return false;
+  const at = value.indexOf("@");
+  if (at < 1 || at !== value.lastIndexOf("@") || at > value.length - 4) return false;
+  const dot = value.lastIndexOf(".");
+  if (dot <= at + 1 || dot >= value.length - 1) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 32 || code === 127) return false;
+  }
+  return true;
 }
 
 function scimFilter(filter?: string): (member: TeamMember) => boolean {
