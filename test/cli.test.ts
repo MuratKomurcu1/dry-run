@@ -32,7 +32,7 @@ describe("CLI safety and configuration", () => {
     for (const flag of ["--version", "-v", "version"]) {
       const result = cli(dir, [flag]);
       expect(result.status, result.stderr).toBe(0);
-      expect(result.stdout.trim()).toBe("0.8.1");
+      expect(result.stdout.trim()).toBe("0.8.2");
     }
   });
 
@@ -215,6 +215,7 @@ describe("CLI safety and configuration", () => {
 
   it("passes release event data to the shell through an environment variable", () => {
     const workflow = readFileSync(path.join(repo, ".github/workflows/release.yml"), "utf8");
+    const dockerfile = readFileSync(path.join(repo, "Dockerfile"), "utf8");
     expect(workflow).toContain('gh release upload "$RELEASE_TAG"');
     expect(workflow).not.toContain('gh release upload "${{ github.event.release.tag_name }}"');
     expect(workflow).toContain("IMAGE: ghcr.io/muratkomurcu1/dry-run");
@@ -225,5 +226,7 @@ describe("CLI safety and configuration", () => {
     expect(workflow).toContain("dry-run-trivy-cache:/root/.cache/trivy");
     expect(workflow).toContain("IMAGE_DIGEST: ${{ steps.image.outputs.digest }}");
     expect(workflow).toContain('["linux/amd64", "linux/arm64"]');
+    expect(workflow).toContain("timeout-minutes: 45");
+    expect(dockerfile).toContain("FROM --platform=$BUILDPLATFORM node:22-alpine AS build");
   });
 });

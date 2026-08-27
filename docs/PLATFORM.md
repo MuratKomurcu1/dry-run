@@ -443,7 +443,7 @@ The dependency-free Python package includes the same cassette/evaluation core pl
 
 ```bash
 python3 -m pip wheel --no-deps --wheel-dir ./dist-python ./python
-python3 -m pip install ./dist-python/dry_run_agent-0.8.1-py3-none-any.whl
+python3 -m pip install ./dist-python/dry_run_agent-0.8.2-py3-none-any.whl
 ```
 
 ```python

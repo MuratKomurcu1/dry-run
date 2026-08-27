@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## [0.8.2] - 2026-08-27
+
+- Build architecture-independent TypeScript output on the native BuildKit platform so cross-platform releases never execute the npm toolchain under QEMU.
+- Bound the verified release job to 45 minutes, retaining native amd64/arm64 runtime builds, per-architecture Trivy gates, and final manifest provenance.
+
 ## [0.8.1] - 2026-08-27
 
 - Publish native `linux/amd64` and `linux/arm64` GHCR images from one verified manifest, scan both architectures with Trivy, and attest the final multi-architecture digest.

@@ -1,2 +1,2 @@
 /** Package version recorded in generated artifacts and transport metadata. */
-export const DRY_RUN_VERSION = "0.8.1" as const;
+export const DRY_RUN_VERSION = "0.8.2" as const;
