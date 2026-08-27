@@ -43,7 +43,7 @@ jobs:
       - run: npm run benchmark -- --scenarios 100 --iterations 5 --output benchmark-ci.json
       - run: npm run benchmark:control-plane -- --requests 250 --concurrency 16 --output control-plane-ci.json
       - run: npm run benchmark:leadership -- --traces 25 --iterations 3 --promotions 10 --mutations 30 --replays 100 --bootstrap 1000 --output leadership-ci.json
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: benchmarks
           path: |
@@ -100,7 +100,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/src:ro" alpine/helm:3.18.6@sha256:c6d8088ddb279625a2e1ca3b08b22c18c946d1f65c8b810f28f1597435a1134c lint /src/deploy/helm/dry-run --set secrets.metricsToken=01234567890123456789012345678901
           docker run --rm -v "$PWD:/src:ro" alpine/helm:3.18.6@sha256:c6d8088ddb279625a2e1ca3b08b22c18c946d1f65c8b810f28f1597435a1134c lint /src/deploy/helm/dry-run --set analytics.clickhouseUrl=https://clickhouse.example --set secrets.clickhousePassword=test --set distributed.enabled=true --set distributed.s3Endpoint=https://minio.example --set distributed.natsUrl=nats://nats.example:4222 --set secrets.postgresUrl=postgresql://dryrun:test@postgres.example/dryrun --set secrets.s3AccessKey=dryrun --set secrets.s3SecretKey=01234567890123456789012345678901 --set secrets.stateEncryptionKey=01234567890123456789012345678901 --set oidc.issuer=https://identity.example --set oidc.clientId=dryrun --set oidc.redirectUri=https://dry-run.example/callback --set secrets.oidcCookieSecret=01234567890123456789012345678901 --set scim.enabled=true --set secrets.scimToken=01234567890123456789012345678901 --set secrets.metricsToken=01234567890123456789012345678901 --set ingress.enabled=true --set metrics.serviceMonitor.enabled=true
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: distributed-contract
           path: |
