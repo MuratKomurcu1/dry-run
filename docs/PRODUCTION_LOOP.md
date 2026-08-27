@@ -156,7 +156,7 @@ permissions:
   contents: read
   issues: write
 
-- uses: MuratKomurcu1/dry-run/.github/actions/dry-run@v0.8.1
+- uses: MuratKomurcu1/dry-run/.github/actions/dry-run@v0.8.2
   with:
     baseline-experiment: .dryrun/experiments/baseline.json
     candidate-experiment: .dryrun/experiments/candidate.json

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dry-run-agent"
-version = "0.8.1"
+version = "0.8.2"
 description = "Dependency-free Python runtime for deterministic and semantic AI evaluation, red-team generation, and v2 agent cassettes"
 requires-python = ">=3.10"
 license = { text = "MIT" }

@@ -1,4 +1,7 @@
-FROM node:22-alpine AS build
+# TypeScript output is architecture-independent. Keep dependency installation and
+# compilation on the native builder so cross-platform releases never execute npm
+# under QEMU; only the small runtime stage targets the requested architecture.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci

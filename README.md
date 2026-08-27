@@ -394,7 +394,7 @@ The importer is a clean-room schema adapter, preserves historical scores as meta
 Drop this into your workflow:
 
 ```yaml
-- uses: MuratKomurcu1/dry-run/.github/actions/dry-run@v0.8.1
+- uses: MuratKomurcu1/dry-run/.github/actions/dry-run@v0.8.2
   with:
     paths: tests
     mode: replay          # never dial out from CI
@@ -411,7 +411,7 @@ permissions:
   issues: write
 
 steps:
-  - uses: MuratKomurcu1/dry-run/.github/actions/dry-run@v0.8.1
+  - uses: MuratKomurcu1/dry-run/.github/actions/dry-run@v0.8.2
     with:
       baseline-experiment: .dryrun/experiments/baseline.json
       candidate-experiment: .dryrun/experiments/candidate.json
