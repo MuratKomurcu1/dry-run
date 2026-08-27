@@ -54,6 +54,7 @@ import { distributedRuntimeFromEnv } from "./distributed-runtime.ts";
 import { DistributedWorkspaceState } from "./distributed-state.ts";
 import { DistributedRecoveryManager } from "./distributed-recovery.ts";
 import { trimTrailingSlashes } from "./safe-text.ts";
+import { DRY_RUN_VERSION } from "./version.ts";
 
 const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
@@ -131,6 +132,7 @@ Run options:
   --seed <value>               Seed Math.random and randomUUID
   --time <ISO-8601>            Freeze Date/Date.now during the run
   -h, --help                   Show this help
+  -v, --version                Show the installed dry-run version
 
 Cassette modes (used by autoCassette() in your scenarios):
   auto        replay if a cassette exists, otherwise record (default)
@@ -146,6 +148,11 @@ async function main(): Promise<number> {
 
   if (!command || command === "-h" || command === "--help") {
     console.log(USAGE);
+    return 0;
+  }
+
+  if (command === "-v" || command === "--version" || command === "version") {
+    console.log(DRY_RUN_VERSION);
     return 0;
   }
 

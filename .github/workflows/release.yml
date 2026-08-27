@@ -33,6 +33,10 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Verify tag and package versions agree
         run: |
           package_version="$(node -p "require('./package.json').version")"
@@ -47,25 +51,47 @@ jobs:
           npm pack
           python3 -m pip wheel --no-deps --wheel-dir dist-python ./python
           npm run sbom
-          docker build --pull -t "$IMAGE:$RELEASE_TAG" -t "$IMAGE:latest" .
-      - name: Scan final runtime image
-        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.67.2@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 image --timeout 15m --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$IMAGE:$RELEASE_TAG"
-      - name: Publish container to GHCR
+      - name: Build native scan images
         run: |
-          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker push "$IMAGE:$RELEASE_TAG"
-          docker push "$IMAGE:latest"
-          docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE:$RELEASE_TAG" > image-digest.txt
+          docker buildx build --pull --platform linux/amd64 --load -t "$IMAGE:scan-amd64" .
+          docker buildx build --pull --platform linux/arm64 --load -t "$IMAGE:scan-arm64" .
+      - name: Scan both final runtime architectures
+        run: |
+          docker volume create dry-run-trivy-cache >/dev/null
+          for architecture in amd64 arm64; do
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v dry-run-trivy-cache:/root/.cache/trivy \
+              aquasec/trivy:0.67.2@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 \
+              image --timeout 15m --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$IMAGE:scan-$architecture"
+          done
+      - name: Log in to GHCR
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Resolve image digest
-        id: digest
-        run: echo "digest=$(cut -d@ -f2 image-digest.txt)" >> "$GITHUB_OUTPUT"
+      - name: Publish native multi-architecture container
+        id: image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.IMAGE }}:${{ env.RELEASE_TAG }}
+            ${{ env.IMAGE }}:latest
+      - name: Record image digest
+        run: |
+          docker buildx imagetools inspect "$IMAGE@$IMAGE_DIGEST" --format '{{json .Manifest}}' \
+            | jq -e '[.manifests[].platform | .os + "/" + .architecture] | sort == ["linux/amd64", "linux/arm64"]'
+          echo "$IMAGE@$IMAGE_DIGEST" > image-digest.txt
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
       - name: Attest GHCR image provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
         with:
           subject-name: ${{ env.IMAGE }}
-          subject-digest: ${{ steps.digest.outputs.digest }}
+          subject-digest: ${{ steps.image.outputs.digest }}
           push-to-registry: true
       - name: Publish npm package with provenance
         if: env.NPM_TOKEN != ''
