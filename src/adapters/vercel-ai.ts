@@ -19,44 +19,35 @@ export function vercelAIModel(
     async doGenerate(options: AnyRecord): Promise<AnyRecord> {
       const { messages, tools } = fromV4Prompt(options);
       const res = await llm.chat({ model: self.modelId, messages, tools });
-
-      const content: AnyRecord[] = [];
-      if (res.text) content.push({ type: "text", text: res.text });
-      for (const call of res.toolCalls) {
-        content.push({
-          type: "tool-call",
-          toolCallId: call.id,
-          toolName: call.name,
-          input: call.arguments,
-        });
-      }
-
-      return {
-        content,
-        finishReason: {
-          unified: res.toolCalls.length > 0 ? "tool-calls" : "stop",
-          raw: res.toolCalls.length > 0 ? "tool-calls" : "stop",
-        },
-        usage: toV4Usage(res.usage),
-        warnings: [],
-      };
+      return toGenerateResult(res);
     },
 
     async doStream(options: AnyRecord): Promise<AnyRecord> {
-      const result = await self.doGenerate(options);
+      const { messages, tools } = fromV4Prompt(options);
+      const response = await llm.chat({ model: self.modelId, messages, tools });
+      const result = toGenerateResult(response);
       const chunks: AnyRecord[] = [{ type: "stream-start", warnings: [] }];
-
-      let textId = 0;
-      for (const part of result.content as AnyRecord[]) {
-        if (part.type === "text") {
-          const id = `txt-${textId++}`;
-          chunks.push({ type: "text-start", id });
-          chunks.push({ type: "text-delta", id, delta: part.text });
-          chunks.push({ type: "text-end", id });
-        } else {
-          chunks.push(part);
+      const events = response.streamEvents?.length
+        ? response.streamEvents
+        : [
+            ...(response.text ? [{ type: "text-delta" as const, textDelta: response.text, offsetMs: undefined }] : []),
+            ...response.toolCalls.map((toolCall) => ({ type: "tool-call" as const, toolCall, offsetMs: undefined })),
+          ];
+      let textOpen = false;
+      const textId = "txt-0";
+      let previousOffset = 0;
+      for (const event of events) {
+        const delayMs = event.offsetMs == null ? undefined : Math.max(0, event.offsetMs - previousOffset);
+        if (event.offsetMs != null) previousOffset = event.offsetMs;
+        if (event.type === "text-delta" && event.textDelta != null) {
+          if (!textOpen) { chunks.push({ type: "text-start", id: textId }); textOpen = true; }
+          chunks.push({ type: "text-delta", id: textId, delta: event.textDelta, _delayMs: delayMs });
+        } else if (event.type === "tool-call" && event.toolCall) {
+          if (textOpen) { chunks.push({ type: "text-end", id: textId }); textOpen = false; }
+          chunks.push({ type: "tool-call", toolCallId: event.toolCall.id, toolName: event.toolCall.name, input: JSON.stringify(event.toolCall.arguments), _delayMs: delayMs });
         }
       }
+      if (textOpen) chunks.push({ type: "text-end", id: textId });
 
       chunks.push({
         type: "finish",
@@ -67,8 +58,13 @@ export function vercelAIModel(
       const encoder = new TextEncoder();
       let i = 0;
       const stream = new ReadableStream({
-        pull(controller) {
-          if (i < chunks.length) controller.enqueue(chunks[i++]);
+        async pull(controller) {
+          if (i < chunks.length) {
+            const chunk = chunks[i++];
+            if (chunk._delayMs) await new Promise((resolve) => setTimeout(resolve, chunk._delayMs));
+            delete chunk._delayMs;
+            controller.enqueue(chunk);
+          }
           else controller.close();
         },
       });
@@ -78,6 +74,14 @@ export function vercelAIModel(
   };
 
   return self;
+}
+
+function toGenerateResult(res: import("../types.ts").ChatResponse): AnyRecord {
+  const content: AnyRecord[] = [];
+  if (res.text) content.push({ type: "text", text: res.text });
+  for (const call of res.toolCalls) content.push({ type: "tool-call", toolCallId: call.id, toolName: call.name, input: JSON.stringify(call.arguments) });
+  const reason = res.finishReason ?? (res.toolCalls.length ? "tool-calls" : "stop");
+  return { content, finishReason: { unified: reason, raw: reason }, usage: toV4Usage(res.usage), warnings: [] };
 }
 
 function fromV4Prompt(options: AnyRecord): {

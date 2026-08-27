@@ -1,0 +1,33 @@
+{
+  "name": "Support answer comparison",
+  "promptName": "support-answer",
+  "endpoint": "http://127.0.0.1:11434/v1",
+  "variants": [
+    {
+      "id": "direct",
+      "name": "Direct",
+      "template": "Answer with only the factual answer. Question: {{input}}",
+      "model": "qwen3:8b",
+      "temperature": 0,
+      "maxTokens": 128
+    },
+    {
+      "id": "explained",
+      "name": "Explained",
+      "template": "Answer accurately and briefly explain the reason. Question: {{input}}",
+      "model": "qwen3:8b",
+      "temperature": 0,
+      "maxTokens": 256
+    }
+  ],
+  "cases": [
+    { "id": "refund-window", "input": "What is the refund window?", "expected": "30 days" },
+    { "id": "support-hours", "input": "When does support open?", "expected": "09:00" }
+  ],
+  "scorer": {
+    "type": "contains",
+    "threshold": 1
+  },
+  "concurrency": 2,
+  "timeoutMs": 30000
+}

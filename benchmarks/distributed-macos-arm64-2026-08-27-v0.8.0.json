@@ -1,0 +1,41 @@
+{
+  "schema": "dry-run.distributed-verification.v2",
+  "createdAt": "2026-08-27T11:02:10.394Z",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v26.7.0"
+  },
+  "health": {
+    "ok": true,
+    "postgres": {
+      "latencyMs": 5.76
+    },
+    "artifacts": {
+      "latencyMs": 1.81
+    },
+    "queue": {
+      "latencyMs": 0.82
+    }
+  },
+  "checks": {
+    "postgresMigrations": true,
+    "postgresRevisions": true,
+    "staleWriteRejected": true,
+    "idempotentTraceWrite": true,
+    "concurrentIdempotentWrite": true,
+    "minioChecksumRoundTrip": true,
+    "crossReplicaRead": true,
+    "pagination": true,
+    "jetStreamDelivery": true,
+    "jetStreamDeadLetterRedrive": true,
+    "jetStreamOnlineEvaluation": true,
+    "crossReplicaHttp": true,
+    "encryptedWorkspaceState": true,
+    "statelessColdNode": true,
+    "crossReplicaControlState": true,
+    "distributedReadiness": true,
+    "portableRecovery": true
+  },
+  "traceId": "trace-mtbey1j1_g65k66"
+}

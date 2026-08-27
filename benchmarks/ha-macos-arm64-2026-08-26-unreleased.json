@@ -1,0 +1,60 @@
+{
+  "schema": "dry-run.ha-verification.v2",
+  "createdAt": "2026-08-26T09:52:22.280Z",
+  "endpoint": "http://quality.localhost:8080",
+  "compose": "deploy/compose.ha.yml",
+  "project": "default",
+  "stoppedReplica": "dryrun-a",
+  "runId": "ha_mt9wzq6h_dak2yo",
+  "environment": {
+    "os": "macOS",
+    "architecture": "arm64",
+    "runtime": "Docker Desktop",
+    "replicas": 2,
+    "sharedStore": "Docker named volume",
+    "analytics": "ClickHouse 25.8",
+    "proxy": "Caddy 2.10"
+  },
+  "method": {
+    "script": "scripts/verify-compose-ha.mjs",
+    "requests": 200,
+    "concurrency": 8,
+    "transition": "Traffic began before docker stop dryrun-a; every transaction performed an authenticated idempotent trace PUT followed by an authenticated GET of the same ID. The stopped replica was restarted and a recovery round followed."
+  },
+  "rounds": [
+    {
+      "stage": "baseline",
+      "expectedTransactions": 8,
+      "successfulTransactions": 8,
+      "failedTransactions": 0,
+      "durationMs": 60.16
+    },
+    {
+      "stage": "failover",
+      "expectedTransactions": 200,
+      "successfulTransactions": 200,
+      "failedTransactions": 0,
+      "durationMs": 615.32
+    },
+    {
+      "stage": "recovery",
+      "expectedTransactions": 40,
+      "successfulTransactions": 40,
+      "failedTransactions": 0,
+      "durationMs": 165.37
+    }
+  ],
+  "summary": {
+    "expectedTransactions": 248,
+    "successfulTransactions": 248,
+    "failedTransactions": 0,
+    "operations": 496,
+    "failedOperations": 0,
+    "failedProbes": 0,
+    "p50OperationLatencyMs": 7.68,
+    "p95OperationLatencyMs": 32.8,
+    "p99OperationLatencyMs": 55.56,
+    "exactReadAfterWriteCardinality": true
+  },
+  "failures": []
+}

@@ -12,7 +12,9 @@ export function report(summary: RunSummary): void {
 
   for (const result of summary.results) {
     const icon = result.passed ? `${GREEN}✓${RESET}` : `${RED}✗${RESET}`;
-    console.log(` ${icon} ${result.name} ${DIM}(${result.durationMs}ms)${RESET}`);
+    const trial = result.trial && result.trial > 1 ? ` ${DIM}[trial ${result.trial}]${RESET}` : "";
+    const retry = result.attempts && result.attempts > 1 ? ` ${DIM}[${result.attempts} attempts]${RESET}` : "";
+    console.log(` ${icon} ${result.name}${trial}${retry} ${DIM}(${result.durationMs}ms)${RESET}`);
 
     if (result.error) {
       console.log(`   ${RED}${result.error}${RESET}`);
@@ -41,6 +43,8 @@ export function report(summary: RunSummary): void {
 
   const tokens = summary.results.reduce((n, r) => n + (r.tokens ?? 0), 0);
   const tokenNote = tokens > 0 ? ` · ${tokens.toLocaleString()} tokens` : "";
+  const cost = summary.results.reduce((total, result) => total + (result.costUsd ?? 0), 0);
+  const costNote = cost > 0 ? ` · $${cost.toFixed(6)}` : "";
 
-  console.log(` ${verdict} ${DIM}· ${summary.durationMs}ms${tokenNote}${RESET}\n`);
+  console.log(` ${verdict} ${DIM}· ${summary.durationMs}ms${tokenNote}${costNote}${RESET}\n`);
 }

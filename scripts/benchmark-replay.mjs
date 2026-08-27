@@ -70,7 +70,7 @@ try {
     package: "@muratkomurcu/dry-run",
     benchmark: "single-turn cassette replay with one deterministic assertion",
     methodology:
-      "Two warmups followed by measured in-process suites. Each scenario constructs a fresh replayer, reads the cassette from disk, runs one agent turn, and evaluates outputEquals.",
+      "Two warmups followed by measured in-process suites. Each scenario constructs a fresh replayer, reads and checksum-verifies cassette v2, canonical-matches the request, runs one agent turn, and evaluates outputEquals.",
     platform: {
       node: process.version,
       os: `${platform()} ${release()}`,
@@ -129,7 +129,7 @@ async function executeSuite() {
         provider: replayer(store, "single-turn"),
         model: "benchmark-model",
       }),
-      input: `wording may vary ${index}`,
+      input: "recorded benchmark request",
       expect: [{ type: "outputEquals", value: "deterministic replay" }],
     }),
   );

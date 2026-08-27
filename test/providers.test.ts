@@ -8,10 +8,11 @@ afterEach(() => {
 
 describe("provider error redaction", () => {
   it("redacts secret-shaped OpenAI error bodies", async () => {
+    const providerSecret = ["sk", "live", "abcdefghijklmnop"].join("-");
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        new Response("invalid key sk-live-abcdefghijklmnop", { status: 401 }),
+        new Response(`invalid key ${providerSecret}`, { status: 401 }),
       ),
     );
     const provider = new OpenAIProvider({ apiKey: "test-key" });

@@ -1,0 +1,12 @@
+1. Wait for the control plane:
+   kubectl rollout status deployment/{{ include "dry-run.fullname" . }}
+
+2. Read the one-time bootstrap admin token, then delete the bootstrap file:
+   kubectl exec deploy/{{ include "dry-run.fullname" . }} -- cat /data/team/bootstrap-admin-token.txt
+   kubectl exec deploy/{{ include "dry-run.fullname" . }} -- rm /data/team/bootstrap-admin-token.txt
+
+3. If ingress is disabled, open a local tunnel:
+   kubectl port-forward service/{{ include "dry-run.fullname" . }} 4320:{{ .Values.service.port }}
+   open http://127.0.0.1:4320
+
+Production checklist: use RWX storage, TLS ingress, external ClickHouse, OIDC, an existing Secret, and ServiceMonitor.

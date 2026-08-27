@@ -1,0 +1,28 @@
+{
+  "schema": "dry-run.control-plane-benchmark.v1",
+  "createdAt": "2026-08-26T00:26:53.949Z",
+  "runtime": {
+    "node": "v26.7.0",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "configuration": {
+    "requests": 2000,
+    "concurrency": 32,
+    "backend": "memory",
+    "payload": "single-span trace"
+  },
+  "result": {
+    "elapsedMs": 8596.037417,
+    "requestsPerSecond": 232.66534369018558,
+    "errors": 0,
+    "errorRate": 0,
+    "latencyMs": {
+      "p50": 133.8089170000003,
+      "p95": 227.98433399999976,
+      "p99": 286.65799999999945,
+      "max": 353.94025
+    },
+    "analyticsCount": 2000
+  }
+}

@@ -46,6 +46,8 @@ export function loadGolden(file: string): GoldenFile {
 
 export interface CompareOptions {
   ignoreOutput?: boolean;
+  ignoreTokens?: boolean;
+  tokenTolerance?: number;
 }
 
 export function compareGolden(
@@ -69,6 +71,14 @@ export function compareGolden(
     }
     if (!opts.ignoreOutput && base.output !== cur.output) {
       changes.push(`output changed:\n        ${truncate(base.output)}\n        → ${truncate(cur.output)}`);
+    }
+    if (
+      !opts.ignoreTokens &&
+      base.tokens != null &&
+      cur.tokens != null &&
+      Math.abs(base.tokens - cur.tokens) > (opts.tokenTolerance ?? 0)
+    ) {
+      changes.push(`tokens: ${base.tokens} → ${cur.tokens}`);
     }
     diffs.push({ name: cur.name, status: changes.length ? "drift" : "pass", changes });
   }

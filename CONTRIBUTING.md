@@ -12,7 +12,7 @@ npm run build
 npm test
 ```
 
-Requirements: Node >= 22.18. No runtime dependencies — ever. That's a design constraint, not an accident: a testing tool must not add install weight to the projects it protects.
+Requirements: Node >= 22.18 and Python >= 3.10 for the cross-runtime verification. Runtime dependencies must remain small, audited and justified; Ajv provides standards-compliant JSON Schema assertions.
 
 ## Project layout
 
@@ -20,22 +20,31 @@ Requirements: Node >= 22.18. No runtime dependencies — ever. That's a design c
 src/
   types.ts        Core domain: Trajectory, Scenario, Assertion, LLMProvider
   agent.ts        defineAgent() ReAct harness
-  providers/      MockProvider, OpenAIProvider (any OpenAI-compatible), AnthropicProvider
-  cassette.ts     Record/replay engine, request signatures, secret redaction
+  providers/      Mock, OpenAI Chat/Responses, Anthropic, generic HTTP
+  integrations/   OpenAI Agents, LangGraph, OTLP/Jaeger, A2A bridges
+  cassette.ts     v1 migration, v2 envelope, matching, checksums, redaction
   cached-tools.ts Tool-boundary caching (cachedTools)
+  dataset.ts      Versioned JSON/JSONL/CSV evaluation cases
+  scorers.ts      Deterministic, judge, retrieval, security and composite scores
+  experiment.ts   Trials, resume, persistence, aggregates and comparison
+  tracing.ts      Nested spans, local trace store, feedback and OTLP export
+  prompts.ts      Immutable checksummed prompt versions and labels
+  generation.ts   Synthetic and adversarial dataset generation
+  studio.ts       Token-protected loopback experiment/trace/prompt UI
   assertions.ts   Deterministic assertion evaluation
-  runner.ts       Scenario discovery + execution + judge wiring
+  runner.ts       Discovery, selection, parallel trials/retries, cancellation, judge wiring
   reporter.ts     Terminal output
   junit.ts        JUnit XML export
-  adapters/       Vercel AI SDK model wrapper
-  cli.ts          dry-run run | init
+  adapters/       Vercel AI SDK generation/stream bridge
+  cli.ts          regression, evaluation, dataset, trace, prompt and Studio commands
+python/           cassette-compatible Python reader/replayer/runner
 test/             vitest suites (all offline)
 examples/         Runnable example scenarios
 ```
 
 ## Principles
 
-1. **Zero runtime dependencies.** Everything ships in the box.
+1. **Minimal runtime surface.** A dependency must buy standards compliance or security and pass audit.
 2. **Deterministic by default.** A test that passes twice and fails once is a bug in dry-run, not in flakiness.
 3. **Fail loudly, never silently.** Stale cassettes and cache misses throw with instructions, never serve wrong data.
 4. **Secret-shaped values are redacted before persistence.** Redaction is defense in depth, not a substitute for reviewing cassettes before commit; a leak path is a P0.

@@ -3,4 +3,10 @@ dist/
 *.log
 .DS_Store
 .env
+deploy/secrets/
 .dryrun/
+__pycache__/
+*.py[cod]
+python/build/
+python/*.egg-info/
+sbom.cdx.json

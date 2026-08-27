@@ -1,0 +1,24 @@
+groups:
+  - name: dryrun-slo
+    rules:
+      - alert: DryRunReplicaUnavailable
+        expr: sum(up{job="dryrun"}) < 2
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: A Dry Run replica is unavailable
+      - alert: DryRunHighServerErrorRate
+        expr: sum(rate(dryrun_http_request_errors_total{job="dryrun"}[5m])) / clamp_min(sum(rate(dryrun_http_requests_total{job="dryrun"}[5m])), 0.000001) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Dry Run 5xx rate is above 1%
+      - alert: DryRunHighP95Latency
+        expr: histogram_quantile(0.95, sum by (le) (rate(dryrun_http_request_duration_ms_bucket{job="dryrun"}[5m]))) > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Dry Run p95 latency is above one second

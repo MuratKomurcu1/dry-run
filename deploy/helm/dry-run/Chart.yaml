@@ -1,0 +1,15 @@
+apiVersion: v2
+name: dry-run
+description: Self-hosted AI evaluation, tracing, analytics, and human review control plane
+type: application
+version: 0.8.0
+appVersion: "0.8.0"
+kubeVersion: ">=1.27.0-0"
+home: https://github.com/MuratKomurcu1/dry-run
+sources:
+  - https://github.com/MuratKomurcu1/dry-run
+maintainers:
+  - name: Murat Komurcu
+annotations:
+  artifacthub.io/license: MIT
+  artifacthub.io/category: monitoring-logging

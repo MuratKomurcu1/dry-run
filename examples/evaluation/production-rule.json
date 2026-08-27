@@ -1,0 +1,21 @@
+{
+  "name": "Support production guard",
+  "description": "Sample production support traces and route actionable failures to review.",
+  "enabled": true,
+  "filter": {
+    "tags": ["production"],
+    "sampleRate": 0.25
+  },
+  "checks": [
+    { "type": "maxDuration", "ms": 3000 },
+    { "type": "maxTokens", "count": 2500 },
+    { "type": "noToolErrors" },
+    { "type": "noRepeatedToolCalls" }
+  ],
+  "action": {
+    "queueName": "Production quality inbox",
+    "priority": 75,
+    "labels": ["production", "quality-regression"]
+  },
+  "unavailable": "fail"
+}

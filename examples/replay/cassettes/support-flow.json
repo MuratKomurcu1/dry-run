@@ -1,139 +1,182 @@
-[
-  {
-    "request": {
-      "model": "recorded-provider",
-      "messages": [
-        {
-          "role": "system",
-          "content": "You are a careful support agent."
-        },
-        {
-          "role": "user",
-          "content": "Please refund order #1234"
-        }
-      ],
-      "tools": [
-        {
-          "name": "lookup_order",
-          "description": "Look up an order",
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
-          }
-        },
-        {
-          "name": "issue_refund",
-          "description": "Refund an eligible order",
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
-          }
-        }
-      ]
+{
+  "kind": "dry-run.cassette",
+  "version": 2,
+  "metadata": {
+    "name": "support-flow",
+    "createdAt": "2026-08-25T18:16:21.120Z",
+    "updatedAt": "2026-08-25T18:16:21.126Z",
+    "producer": {
+      "name": "@muratkomurcu/dry-run",
+      "version": "0.4.0"
     },
-    "response": {
-      "text": null,
-      "toolCalls": [
-        {
-          "id": "call_lookup_1",
-          "name": "lookup_order",
-          "arguments": {
-            "id": "1234"
-          }
-        }
-      ],
-      "usage": {
-        "inputTokens": 41,
-        "outputTokens": 12
-      }
+    "runtime": {
+      "name": "node",
+      "version": "v26.7.0",
+      "platform": "darwin",
+      "arch": "arm64"
+    },
+    "gitSha": "e80fea8cead043498d9fd1735bac584cdfaefab7",
+    "matching": "shape",
+    "redaction": {
+      "enabled": true,
+      "policy": "dry-run-secrets-v1"
+    },
+    "source": {
+      "migratedFrom": 1
     }
   },
-  {
-    "request": {
-      "model": "recorded-provider",
-      "messages": [
-        {
-          "role": "system",
-          "content": "You are a careful support agent."
-        },
-        {
-          "role": "user",
-          "content": "Please refund order #1234"
-        },
-        {
-          "role": "assistant",
-          "content": null,
-          "toolCalls": [
-            {
-              "id": "call_lookup_1",
-              "name": "lookup_order",
-              "arguments": {
-                "id": "1234"
-              }
+  "interactions": [
+    {
+      "request": {
+        "model": "recorded-provider",
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a careful support agent."
+          },
+          {
+            "role": "user",
+            "content": "Please refund order #1234"
+          }
+        ],
+        "tools": [
+          {
+            "name": "lookup_order",
+            "description": "Look up an order",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
             }
-          ]
-        },
-        {
-          "role": "tool",
-          "content": "{\"ok\":true,\"result\":{\"id\":\"1234\",\"status\":\"paid\",\"eligible\":true}}",
-          "toolCallId": "call_lookup_1",
-          "name": "lookup_order"
-        }
-      ],
-      "tools": [
-        {
-          "name": "lookup_order",
-          "description": "Look up an order",
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
+          },
+          {
+            "name": "issue_refund",
+            "description": "Refund an eligible order",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
           }
-        },
-        {
-          "name": "issue_refund",
-          "description": "Refund an eligible order",
-          "parameters": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id"
-            ]
+        ]
+      },
+      "response": {
+        "text": null,
+        "toolCalls": [
+          {
+            "id": "call_lookup_1",
+            "name": "lookup_order",
+            "arguments": {
+              "id": "1234"
+            }
           }
+        ],
+        "usage": {
+          "inputTokens": 41,
+          "outputTokens": 12
         }
-      ]
+      },
+      "id": "64a35111-a449-4b7c-9708-bf1600d51659",
+      "recordedAt": "2026-08-25T18:16:21.121Z",
+      "fingerprints": {
+        "exact": "sha256:623016c1294062ab0b87d9109d2506b768f3780e45efd004c5bb50a22582678d",
+        "canonical": "sha256:1b5506d4a91aac7bd13b082a7d97427b333362713838e4345e8bd649bc914e81",
+        "shape": "sha256:638b48be7f3db40b43dd098d279d6180272bb4c02b126eb16f2c5f62fe74607d"
+      }
     },
-    "response": {
-      "text": "Order #1234 is eligible. I have prepared the refund for review.",
-      "toolCalls": [],
-      "usage": {
-        "inputTokens": 88,
-        "outputTokens": 18
+    {
+      "request": {
+        "model": "recorded-provider",
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a careful support agent."
+          },
+          {
+            "role": "user",
+            "content": "Please refund order #1234"
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "toolCalls": [
+              {
+                "id": "call_lookup_1",
+                "name": "lookup_order",
+                "arguments": {
+                  "id": "1234"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": "{\"ok\":true,\"result\":{\"id\":\"1234\",\"status\":\"paid\",\"eligible\":true}}",
+            "toolCallId": "call_lookup_1",
+            "name": "lookup_order"
+          }
+        ],
+        "tools": [
+          {
+            "name": "lookup_order",
+            "description": "Look up an order",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          },
+          {
+            "name": "issue_refund",
+            "description": "Refund an eligible order",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id"
+              ]
+            }
+          }
+        ]
+      },
+      "response": {
+        "text": "Order #1234 is eligible. I have prepared the refund for review.",
+        "toolCalls": [],
+        "usage": {
+          "inputTokens": 88,
+          "outputTokens": 18
+        }
+      },
+      "id": "78d3374d-46eb-4542-b004-627e1cf1343f",
+      "recordedAt": "2026-08-25T18:16:21.126Z",
+      "fingerprints": {
+        "exact": "sha256:9fb4b4e0e140ed27e20c88a3616ede579eb06e9a0119a48665c21d28eba2952f",
+        "canonical": "sha256:4892647a4be05c743b512e597b69f086fd920dca8b245b635021aa7dbf90a533",
+        "shape": "sha256:8d7b1a107c30945b13aeb9d4be2527da42d1733e598e7fda7b8d1389966fd315"
       }
     }
-  }
-]
+  ],
+  "checksum": "sha256:e119de4fc6218fa710ec97edcf15b7cf69f0ff694c7643b45d8b62b1a92e2448"
+}

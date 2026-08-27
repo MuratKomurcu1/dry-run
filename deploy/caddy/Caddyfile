@@ -1,0 +1,30 @@
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+
+	@keycloak path /realms/* /resources/* /admin/* /js/*
+	handle @keycloak {
+		reverse_proxy keycloak:8080
+	}
+
+	handle {
+		reverse_proxy dryrun-a:4320 dryrun-b:4320 {
+			lb_policy least_conn
+			# Retry a different replica during the small interval between SIGTERM and
+			# active-health convergence. Trace writes are idempotent by trace ID.
+			lb_try_duration 5s
+			lb_try_interval 50ms
+			lb_retry_match {
+				method GET PUT
+			}
+			health_uri /api/v1/health/ready
+			health_interval 2s
+			health_timeout 3s
+			fail_duration 20s
+		}
+	}
+}

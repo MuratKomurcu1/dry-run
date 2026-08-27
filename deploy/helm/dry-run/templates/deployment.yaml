@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dry-run.fullname" . }}
+  labels: {{- include "dry-run.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels: {{- include "dry-run.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secrets: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}{{ toYaml . | nindent 8 }}{{- end }}
+      labels:
+        {{- include "dry-run.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}{{ toYaml . | nindent 8 }}{{- end }}
+    spec:
+      securityContext: {{ toYaml .Values.securityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 40
+      {{- with .Values.imagePullSecrets }}imagePullSecrets: {{ toYaml . | nindent 8 }}{{- end }}
+      initContainers:
+        {{- if not .Values.distributed.enabled }}
+        - name: initialize-workspace
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              if [ -f /data/team/workspace.json ]; then exit 0; fi
+              if mkdir /data/.dryrun-init-lock 2>/dev/null; then
+                trap 'rmdir /data/.dryrun-init-lock 2>/dev/null || true' EXIT
+                dry-run team init --dir /data/team --name "$DRYRUN_WORKSPACE_NAME" --retention-days "$DRYRUN_RETENTION_DAYS" > /data/team/bootstrap-admin-token.txt
+                chmod 600 /data/team/bootstrap-admin-token.txt
+              else
+                i=0; while [ "$i" -lt 120 ]; do [ -f /data/team/workspace.json ] && exit 0; i=$((i+1)); sleep 1; done
+                echo "workspace initialization timed out" >&2; exit 1
+              fi
+          env:
+            - { name: DRYRUN_WORKSPACE_NAME, value: {{ .Values.workspace.name | quote }} }
+            - { name: DRYRUN_RETENTION_DAYS, value: {{ .Values.workspace.retentionDays | quote }} }
+          securityContext: {{ toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
+        {{- end }}
+      containers:
+        - name: dry-run
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["team", "serve", "--dir", "/data/team", "--host", "0.0.0.0", "--port", "4320", "--allow-insecure-remote", "--no-open"{{- if and .Values.analytics.clickhouseUrl .Values.analytics.allowInsecureHttp }}, "--clickhouse-allow-insecure-http"{{- end }}]
+          ports:
+            - { name: http, containerPort: 4320, protocol: TCP }
+          env:
+            - { name: NODE_ENV, value: production }
+            - { name: DRYRUN_GRACEFUL_SHUTDOWN_MS, value: "30000" }
+            - { name: DRYRUN_METRICS_ENABLED, value: {{ .Values.metrics.enabled | quote }} }
+            {{- if .Values.metrics.enabled }}
+            - name: DRYRUN_METRICS_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: metricsToken } }
+            {{- end }}
+            {{- if .Values.analytics.clickhouseUrl }}
+            - { name: DRYRUN_CLICKHOUSE_URL, value: {{ .Values.analytics.clickhouseUrl | quote }} }
+            - { name: DRYRUN_CLICKHOUSE_DATABASE, value: {{ .Values.analytics.database | quote }} }
+            - { name: DRYRUN_CLICKHOUSE_USER, value: {{ .Values.analytics.username | quote }} }
+            - name: DRYRUN_CLICKHOUSE_PASSWORD
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: clickhousePassword } }
+            {{- end }}
+            {{- if .Values.distributed.enabled }}
+            - name: DRYRUN_POSTGRES_URL
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: postgresUrl } }
+            - { name: DRYRUN_POSTGRES_SCHEMA, value: {{ .Values.distributed.postgresSchema | quote }} }
+            - { name: DRYRUN_POSTGRES_POOL_SIZE, value: {{ .Values.distributed.postgresPoolSize | quote }} }
+            - { name: DRYRUN_S3_ENDPOINT, value: {{ required "distributed.s3Endpoint is required" .Values.distributed.s3Endpoint | quote }} }
+            - { name: DRYRUN_S3_BUCKET, value: {{ .Values.distributed.s3Bucket | quote }} }
+            - { name: DRYRUN_S3_REGION, value: {{ .Values.distributed.s3Region | quote }} }
+            - { name: DRYRUN_S3_TLS, value: {{ .Values.distributed.s3Tls | quote }} }
+            - { name: DRYRUN_S3_FORCE_PATH_STYLE, value: {{ .Values.distributed.s3ForcePathStyle | quote }} }
+            - { name: DRYRUN_S3_CREATE_BUCKET, value: {{ .Values.distributed.s3CreateBucket | quote }} }
+            - name: DRYRUN_S3_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: s3AccessKey } }
+            - name: DRYRUN_S3_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: s3SecretKey } }
+            - { name: DRYRUN_NATS_URL, value: {{ required "distributed.natsUrl is required" .Values.distributed.natsUrl | quote }} }
+            - { name: DRYRUN_NATS_REPLICAS, value: {{ .Values.distributed.natsReplicas | quote }} }
+            - { name: DRYRUN_WORKSPACE_ALIAS, value: {{ .Values.distributed.workspaceAlias | quote }} }
+            - name: DRYRUN_STATE_ENCRYPTION_KEY
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: stateEncryptionKey } }
+            {{- end }}
+            {{- if .Values.oidc.issuer }}
+            - { name: DRYRUN_OIDC_ISSUER, value: {{ .Values.oidc.issuer | quote }} }
+            - { name: DRYRUN_OIDC_CLIENT_ID, value: {{ .Values.oidc.clientId | quote }} }
+            - { name: DRYRUN_OIDC_REDIRECT_URI, value: {{ .Values.oidc.redirectUri | quote }} }
+            - { name: DRYRUN_OIDC_ALLOWED_DOMAINS, value: {{ .Values.oidc.allowedDomains | quote }} }
+            - { name: DRYRUN_OIDC_GROUPS_CLAIM, value: {{ .Values.oidc.groupsClaim | quote }} }
+            - { name: DRYRUN_OIDC_ROLE_MAPPINGS, value: {{ .Values.oidc.roleMappings | quote }} }
+            - { name: DRYRUN_OIDC_DEFAULT_ROLE, value: {{ .Values.oidc.defaultRole | quote }} }
+            - name: DRYRUN_OIDC_COOKIE_SECRET
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: oidcCookieSecret } }
+            - name: DRYRUN_OIDC_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: oidcClientSecret, optional: true } }
+            {{- end }}
+            {{- if .Values.scim.enabled }}
+            - name: DRYRUN_SCIM_TOKEN
+              valueFrom: { secretKeyRef: { name: {{ include "dry-run.secretName" . }}, key: scimToken } }
+            - { name: DRYRUN_SCIM_ISSUER, value: {{ .Values.scim.issuer | quote }} }
+            - { name: DRYRUN_SCIM_BASE_URL, value: {{ .Values.scim.baseUrl | quote }} }
+            {{- end }}
+            {{- with .Values.extraEnv }}{{ toYaml . | nindent 12 }}{{- end }}
+          securityContext: {{ toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources: {{ toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
+          startupProbe:
+            httpGet: { path: /api/v1/health/live, port: http }
+            failureThreshold: 30
+            periodSeconds: 2
+          livenessProbe:
+            httpGet: { path: /api/v1/health/live, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /api/v1/health/ready, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        - name: data
+          {{- if .Values.distributed.enabled }}
+          emptyDir: { sizeLimit: {{ .Values.workspace.size }} }
+          {{- else }}
+          persistentVolumeClaim: { claimName: {{ include "dry-run.claimName" . }} }
+          {{- end }}
+        - name: tmp
+          emptyDir: { sizeLimit: 128Mi }
+      {{ with .Values.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{ end }}
+      {{ with .Values.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{ end }}
+      {{ with .Values.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{ end }}
+      {{ with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{ toYaml . | nindent 8 }}
+      {{ end }}

@@ -1,0 +1,20 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "dry-run.fullname" . }}
+  labels: {{- include "dry-run.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- include "dry-run.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: {{ toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+      ports: [{ port: 4320, protocol: TCP }]
+  egress:
+    - to: [{ namespaceSelector: {}, podSelector: { matchLabels: { k8s-app: kube-dns } } }]
+      ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+    - ports: [{ port: 443, protocol: TCP }, { port: 4222, protocol: TCP }, { port: 5432, protocol: TCP }, { port: 8123, protocol: TCP }, { port: 8443, protocol: TCP }, { port: 9000, protocol: TCP }]
+    {{- with .Values.networkPolicy.extraEgress }}{{ toYaml . | nindent 4 }}{{- end }}
+{{- end }}

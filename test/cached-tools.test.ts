@@ -60,7 +60,7 @@ describe("cachedTools", () => {
       { search: async () => "fresh" },
       { dir, mode: "replay" },
     );
-    const secret = "sk-live-qrstuvwxyzabcdef";
+    const secret = ["sk", "live", "qrstuvwxyzabcdef"].join("-");
     await expect(tools.search({ apiKey: secret })).rejects.not.toThrow(secret);
     await expect(tools.search({ apiKey: secret })).rejects.toThrow(/argument fingerprint sha256:/);
   });
@@ -111,18 +111,20 @@ describe("cachedTools", () => {
 
   it("does not persist secret tool arguments or secret-shaped results", async () => {
     const dir = tmpDir();
+    const providerSecret = ["sk", "live", "abcdefghijklmnop"].join("-");
+    const requestSecret = ["sk", "live", "qrstuvwxyzabcdef"].join("-");
     const tools = cachedTools(
       {
         lookup: async () => ({
           ok: true,
           authorization: "Bearer abcdefghijklmnopqrstuvwxyz",
-          note: "provider returned sk-live-abcdefghijklmnop",
+          note: `provider returned ${providerSecret}`,
         }),
       },
       { dir },
     );
 
-    await tools.lookup({ apiKey: "sk-live-qrstuvwxyzabcdef", query: "order" });
+    await tools.lookup({ apiKey: requestSecret, query: "order" });
     const raw = readFileSync(path.join(dir, "tools", "lookup.json"), "utf8");
     expect(raw).not.toContain("sk-live-");
     expect(raw).not.toContain("Bearer abc");
@@ -134,7 +136,8 @@ describe("cachedTools", () => {
     const dir = tmpDir();
     const toolDir = path.join(dir, "tools");
     await import("node:fs").then((fs) => fs.mkdirSync(toolDir, { recursive: true }));
-    const legacyKey = JSON.stringify({ apiKey: "sk-live-abcdefghijklmnop", query: "order" });
+    const providerSecret = ["sk", "live", "abcdefghijklmnop"].join("-");
+    const legacyKey = JSON.stringify({ apiKey: providerSecret, query: "order" });
     await import("node:fs").then((fs) =>
       fs.writeFileSync(
         path.join(toolDir, "lookup.json"),
@@ -143,7 +146,7 @@ describe("cachedTools", () => {
     );
 
     const tools = cachedTools({ lookup: async () => "should not run" }, { dir });
-    await tools.lookup({ apiKey: "sk-live-abcdefghijklmnop", query: "order" });
+    await tools.lookup({ apiKey: providerSecret, query: "order" });
     const raw = readFileSync(path.join(toolDir, "lookup.json"), "utf8");
     expect(raw).not.toContain("sk-live-");
     expect(raw).not.toContain("Bearer abc");

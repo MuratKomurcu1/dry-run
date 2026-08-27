@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Dry Run
+    orgId: 1
+    folder: Dry Run
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

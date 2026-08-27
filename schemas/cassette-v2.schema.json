@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/MuratKomurcu1/dry-run/main/schemas/cassette-v2.schema.json",
+  "title": "dry-run cassette v2",
+  "type": "object",
+  "required": ["kind", "version", "metadata", "interactions", "checksum"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "kind": { "const": "dry-run.cassette" },
+    "version": { "const": 2 },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "createdAt", "updatedAt", "producer", "runtime", "matching", "redaction"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "producer": {
+          "type": "object",
+          "required": ["name", "version"],
+          "properties": { "name": { "type": "string" }, "version": { "type": "string" } },
+          "additionalProperties": true
+        },
+        "runtime": {
+          "type": "object",
+          "required": ["name", "version", "platform", "arch"],
+          "properties": {
+            "name": { "type": "string" }, "version": { "type": "string" },
+            "platform": { "type": "string" }, "arch": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "gitSha": { "type": "string" },
+        "matching": { "enum": ["exact", "canonical", "shape"] },
+        "redaction": {
+          "type": "object",
+          "required": ["enabled", "policy"],
+          "properties": { "enabled": { "type": "boolean" }, "policy": { "type": "string" } },
+          "additionalProperties": true
+        },
+        "source": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "interactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["request", "response"],
+        "properties": {
+          "id": { "type": "string" },
+          "recordedAt": { "type": "string", "format": "date-time" },
+          "request": {
+            "type": "object",
+            "required": ["model", "messages"],
+            "properties": {
+              "model": { "type": "string" },
+              "messages": { "type": "array" },
+              "tools": { "type": "array" }
+            },
+            "additionalProperties": true
+          },
+          "response": {
+            "type": "object",
+            "required": ["text", "toolCalls"],
+            "properties": {
+              "text": { "type": ["string", "null"] },
+              "toolCalls": { "type": "array" }
+            },
+            "additionalProperties": true
+          },
+          "fingerprints": {
+            "type": "object",
+            "properties": {
+              "exact": { "$ref": "#/$defs/sha256" },
+              "canonical": { "$ref": "#/$defs/sha256" },
+              "shape": { "$ref": "#/$defs/sha256" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "checksum": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  },
+  "additionalProperties": true
+}

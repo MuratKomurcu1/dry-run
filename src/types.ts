@@ -9,6 +9,8 @@ export interface ToolCall {
 export interface TokenUsage {
   inputTokens: number;
   outputTokens: number;
+  cachedInputTokens?: number;
+  reasoningTokens?: number;
 }
 
 export interface ChatMessage {
@@ -29,12 +31,29 @@ export interface ChatRequest {
   model: string;
   messages: ChatMessage[];
   tools?: ToolDef[];
+  temperature?: number;
+  topP?: number;
+  maxTokens?: number;
+  responseFormat?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  signal?: AbortSignal;
 }
 
 export interface ChatResponse {
   text: string | null;
   toolCalls: ToolCall[];
   usage?: TokenUsage;
+  costUsd?: number;
+  finishReason?: string;
+  providerMetadata?: Record<string, unknown>;
+  streamEvents?: ChatStreamEvent[];
+}
+
+export interface ChatStreamEvent {
+  type: "text-delta" | "tool-call";
+  textDelta?: string;
+  toolCall?: ToolCall;
+  offsetMs?: number;
 }
 
 export interface LLMProvider {
@@ -48,6 +67,8 @@ export interface Step {
   toolCall?: ToolCall;
   result?: unknown;
   error?: string;
+  durationMs?: number;
+  costUsd?: number;
 }
 
 export interface Trajectory {
@@ -55,7 +76,20 @@ export interface Trajectory {
   output: string;
 }
 
-export type TestAgent = (input: string) => Promise<Trajectory>;
+export interface AgentRunContext {
+  signal: AbortSignal;
+  trial: number;
+}
+
+export type TestAgent = (input: string, context?: AgentRunContext) => Promise<Trajectory>;
+
+export type TrajectoryMatchMode = "strict" | "unordered" | "subset" | "superset";
+
+export type CustomAssertionValue =
+  | boolean
+  | string
+  | AssertionResult
+  | Promise<boolean | string | AssertionResult>;
 
 export type Assertion =
   | { type: "toolCalled"; tool: string; times?: number; argsContains?: Record<string, unknown> }
@@ -65,7 +99,16 @@ export type Assertion =
   | { type: "outputMatches"; pattern: string; flags?: string }
   | { type: "maxSteps"; count: number }
   | { type: "maxTokens"; count: number }
+  | { type: "maxLLMCalls"; count: number }
+  | { type: "maxDuration"; ms: number }
+  | { type: "maxCost"; usd: number }
   | { type: "noRepeatedToolCalls"; limit?: number }
+  | { type: "noToolErrors" }
+  | { type: "toolOrder"; tools: string[]; exact?: boolean }
+  | { type: "toolArgsSchema"; tool: string; schema: Record<string, unknown>; every?: boolean }
+  | { type: "outputJsonSchema"; schema: Record<string, unknown> }
+  | { type: "trajectory"; tools: string[]; mode?: TrajectoryMatchMode }
+  | { type: "custom"; name: string; evaluate: (trajectory: Trajectory) => CustomAssertionValue }
   | { type: "semantic"; criteria: string };
 
 export interface Scenario {
@@ -74,6 +117,9 @@ export interface Scenario {
   input: string;
   expect: Assertion[];
   timeoutMs?: number;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  retries?: number;
 }
 
 export interface AssertionResult {
@@ -89,6 +135,10 @@ export interface ScenarioResult {
   assertions: AssertionResult[];
   durationMs: number;
   tokens?: number;
+  costUsd?: number;
+  trial?: number;
+  attempts?: number;
+  tags?: string[];
   error?: string;
 }
 

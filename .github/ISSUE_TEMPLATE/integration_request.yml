@@ -1,0 +1,39 @@
+name: Integration request
+description: Request a framework, provider, telemetry, dataset, or migration adapter
+title: "[integration]: "
+labels: [integration]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping make Dry Run portable. Do not include API keys, private traces, or customer data.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options: [Agent framework, Model provider, Trace format, Evaluation platform migration, Dataset format, CI/CD, Other]
+    validations: { required: true }
+  - type: input
+    id: project
+    attributes:
+      label: Project and documentation URL
+      placeholder: https://...
+    validations: { required: true }
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow
+      description: Show the smallest real workflow and expected Dry Run API.
+    validations: { required: true }
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sanitized sample payload
+      description: Include a minimal public or synthetic example. Remove all secrets and personal data.
+      render: json
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I can test a prerelease adapter against a non-sensitive fixture.
+        - label: I may be able to contribute a clean-room implementation.

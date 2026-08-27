@@ -1,0 +1,56 @@
+{
+  "generatedAt": "2026-08-25T18:22:55.631Z",
+  "package": "@muratkomurcu/dry-run",
+  "benchmark": "single-turn cassette replay with one deterministic assertion",
+  "methodology": "Two warmups followed by measured in-process suites. Each scenario constructs a fresh replayer, reads and checksum-verifies cassette v2, canonical-matches the request, runs one agent turn, and evaluates outputEquals.",
+  "platform": {
+    "node": "v26.7.0",
+    "os": "darwin 25.5.0",
+    "arch": "arm64",
+    "cpu": "Apple M5"
+  },
+  "scenarioCount": 250,
+  "iterations": 15,
+  "samplesMs": [
+    8.89,
+    8.32,
+    8.12,
+    7.55,
+    7.68,
+    7.49,
+    7.09,
+    7.23,
+    7.56,
+    6.91,
+    7.91,
+    6.96,
+    7.44,
+    7.44,
+    7.7
+  ],
+  "medianMs": 7.55,
+  "p95Ms": 8.89,
+  "medianScenariosPerSecond": 33112.58,
+  "cliExample": {
+    "command": "node dist/cli.js run examples",
+    "samplesMs": [
+      48.95,
+      48.96,
+      47,
+      46.78,
+      46.47,
+      46.97,
+      46.24
+    ],
+    "medianMs": 46.97,
+    "p95Ms": 48.96,
+    "processModel": "fresh Node.js process per sample"
+  },
+  "networkCalls": 0,
+  "providerCostUsd": 0,
+  "notes": [
+    "This measures dry-run replay overhead, not live-provider latency.",
+    "Machine, filesystem, Node version, background load, and suite shape affect results.",
+    "Use the committed raw samples and rerun this command before making environment-specific claims."
+  ]
+}

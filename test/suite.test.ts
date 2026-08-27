@@ -1,10 +1,11 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { defineAgent } from "../src/agent.ts";
 import { MockProvider } from "../src/providers/mock.ts";
-import { autoCassette, CassetteStore } from "../src/cassette.ts";
+import { autoCassette, CassetteStore, parseCassette } from "../src/cassette.ts";
 import type { Interaction } from "../src/cassette.ts";
 import { diffCassette } from "../src/diff.ts";
 import { compareGolden, loadGolden, saveGolden, toGoldenEntry } from "../src/golden.ts";
@@ -37,7 +38,7 @@ async function recordFixture(dir: string, name: string, say: string): Promise<In
   const raw = await import("node:fs").then((fs) =>
     fs.readFileSync(path.join(dir, `${name}.json`), "utf8"),
   );
-  return JSON.parse(raw) as Interaction[];
+  return parseCassette(JSON.parse(raw), name).interactions;
 }
 
 describe("diff", () => {
@@ -115,6 +116,13 @@ describe("golden", () => {
     const diffs = compareGolden(base as never, cur as never);
     expect(diffs.map((d) => d.status).sort()).toEqual(["missing", "new"]);
   });
+
+  it("detects token regressions with an optional tolerance", () => {
+    const base = [{ name: "tokens", toolCalls: [], output: "ok", tokens: 100 }];
+    const current = [{ name: "tokens", toolCalls: [], output: "ok", tokens: 112 }];
+    expect(compareGolden(base, current)[0].status).toBe("drift");
+    expect(compareGolden(base, current, { tokenTolerance: 20 })[0].status).toBe("pass");
+  });
 });
 
 describe("generate", () => {
@@ -131,7 +139,7 @@ describe("generate", () => {
     await import("node:fs").then((fs) => fs.writeFileSync(testFile, source));
 
     process.env.DRYRUN_CASSETTE_DIR = dir;
-    const mod = await import(`file://${testFile}?bust=${Date.now()}`);
+    const mod = await import(`${pathToFileURL(testFile).href}?bust=${Date.now()}`);
     delete process.env.DRYRUN_CASSETTE_DIR;
 
     const summary = await runScenarios(mod.default);

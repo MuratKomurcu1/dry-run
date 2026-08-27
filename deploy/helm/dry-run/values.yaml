@@ -1,0 +1,143 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/muratkomurcu1/dry-run
+  pullPolicy: IfNotPresent
+  tag: ""
+imagePullSecrets: []
+
+workspace:
+  name: AI Quality
+  retentionDays: 90
+  storageClass: ""
+  accessModes: [ReadWriteMany]
+  size: 20Gi
+  existingClaim: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: dry-run.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests: { cpu: 100m, memory: 192Mi }
+  limits: { cpu: "1", memory: 1Gi }
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+analytics:
+  clickhouseUrl: ""
+  database: dryrun
+  username: dryrun
+  allowInsecureHttp: false
+
+distributed:
+  enabled: false
+  workspaceAlias: default
+  postgresUrl: ""
+  postgresSchema: dryrun
+  postgresPoolSize: 20
+  s3Endpoint: ""
+  s3Bucket: dryrun-artifacts
+  s3Region: us-east-1
+  s3Tls: true
+  s3ForcePathStyle: true
+  s3CreateBucket: false
+  natsUrl: ""
+  natsReplicas: 1
+
+oidc:
+  issuer: ""
+  clientId: ""
+  redirectUri: ""
+  allowedDomains: ""
+  groupsClaim: groups
+  roleMappings: '[]'
+  defaultRole: viewer
+
+scim:
+  enabled: false
+  issuer: ""
+  baseUrl: ""
+
+secrets:
+  create: true
+  existingSecret: ""
+  clickhousePassword: ""
+  oidcClientSecret: ""
+  oidcCookieSecret: ""
+  scimToken: ""
+  metricsToken: ""
+  postgresUrl: ""
+  s3AccessKey: ""
+  s3SecretKey: ""
+  stateEncryptionKey: ""
+
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    labels: {}
+
+networkPolicy:
+  enabled: true
+  ingressNamespaceSelector: {}
+  extraEgress: []
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [dry-run]
+          topologyKey: kubernetes.io/hostname
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: dry-run
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities: { drop: [ALL] }
+  seccompProfile: { type: RuntimeDefault }
+
+extraEnv: []

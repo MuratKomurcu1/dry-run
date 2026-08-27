@@ -1,7 +1,7 @@
 {
   "name": "@muratkomurcu/dry-run",
-  "version": "0.3.1",
-  "description": "Deterministic end-to-end testing for AI agents. Record once, replay forever.",
+  "version": "0.8.0",
+  "description": "Local-first evaluation, tracing, and deterministic end-to-end testing for AI agents.",
   "type": "module",
   "sideEffects": false,
   "license": "MIT",
@@ -19,25 +19,48 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./schema/cassette-v2": "./schemas/cassette-v2.schema.json"
   },
   "files": [
     "dist",
     "README.md",
+    "ADOPTERS.md",
     "CHANGELOG.md",
     "LICENSE",
     "SECURITY.md",
     "benchmarks",
     "docs",
+    "deploy",
+    "Dockerfile",
     "examples",
-    "scripts/benchmark-replay.mjs"
+    "scripts/benchmark-replay.mjs",
+    "scripts/benchmark-control-plane.mjs",
+    "scripts/benchmark-leadership.mjs",
+    "scripts/verify-compose-ha.mjs",
+    "scripts/verify-clickhouse.mjs",
+    "scripts/verify-distributed.mjs",
+    "scripts/verify-chaos.mjs",
+    "scripts/generate-sbom.mjs",
+    "python/dryrun",
+    "python/pyproject.toml",
+    "schemas"
   ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
+    "test:python": "PYTHONPATH=python python3 -m unittest discover -s python/tests -v",
     "example": "node dist/cli.js run examples",
+    "example:eval": "node dist/cli.js eval examples/evaluation/quality.eval.mjs --no-store",
     "benchmark": "npm run build && node scripts/benchmark-replay.mjs",
-    "verify": "npm run build && npm test && npm run example && npm run benchmark -- --scenarios 100 --iterations 5",
+    "benchmark:control-plane": "npm run build && node scripts/benchmark-control-plane.mjs",
+    "benchmark:leadership": "npm run build && node scripts/benchmark-leadership.mjs",
+    "verify:ha": "npm run build && node scripts/verify-compose-ha.mjs",
+    "verify:clickhouse": "npm run build && node scripts/verify-clickhouse.mjs",
+    "verify:distributed": "npm run build && node scripts/verify-distributed.mjs",
+    "verify:chaos": "npm run build && node scripts/verify-chaos.mjs",
+    "sbom": "node scripts/generate-sbom.mjs --output sbom.cdx.json",
+    "verify": "npm run build && npm test && npm run test:python && npm run example && npm run example:eval && npm run benchmark -- --scenarios 100 --iterations 5 && npm run benchmark:control-plane -- --requests 100 --concurrency 8 && npm run benchmark:leadership -- --traces 20 --iterations 3 --promotions 10 --mutations 30 --replays 50 --bootstrap 1000",
     "prepublishOnly": "npm run verify"
   },
   "keywords": [
@@ -45,6 +68,11 @@
     "agents",
     "llm",
     "testing",
+    "evaluation",
+    "observability",
+    "tracing",
+    "red-team",
+    "prompt-management",
     "e2e",
     "mcp",
     "ci",
@@ -61,12 +89,24 @@
   },
   "homepage": "https://github.com/MuratKomurcu1/dry-run#readme",
   "devDependencies": {
+    "@langchain/core": "^1.2.9",
+    "@langchain/langgraph": "^1.4.12",
+    "@openai/agents": "^0.17.0",
     "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
     "ai": "^7.0.78",
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1118.0",
+    "@nats-io/jetstream": "^3.4.0",
+    "@nats-io/transport-node": "^3.4.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "pg": "^8.23.0"
   }
 }
