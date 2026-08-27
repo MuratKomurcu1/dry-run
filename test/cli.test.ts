@@ -208,5 +208,7 @@ describe("CLI safety and configuration", () => {
     const workflow = readFileSync(path.join(repo, ".github/workflows/release.yml"), "utf8");
     expect(workflow).toContain('gh release upload "$RELEASE_TAG"');
     expect(workflow).not.toContain('gh release upload "${{ github.event.release.tag_name }}"');
+    expect(workflow).toContain("IMAGE: ghcr.io/muratkomurcu1/dry-run");
+    expect(workflow).not.toContain("IMAGE: ghcr.io/${{ github.repository_owner }}/dry-run");
   });
 });
