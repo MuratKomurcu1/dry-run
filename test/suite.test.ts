@@ -146,6 +146,17 @@ describe("generate", () => {
     expect(summary.failed).toBe(0);
     expect(summary.results[0].assertions.length).toBeGreaterThanOrEqual(3);
   });
+
+  it("escapes characters that can break generated JavaScript contexts", async () => {
+    const dir = tmpDir();
+    const interactions = await recordFixture(dir, "gen-unsafe", "safe output");
+    interactions.at(-1)!.response.text = "safe output </script>\u2028without injection";
+    const source = generateScenario(interactions, { scenarioName: "gen-unsafe" });
+    expect(source).not.toContain("</script>");
+    expect(source).not.toContain("\u2028");
+    expect(source).toContain("\\u003C\\u002Fscript\\u003E");
+    expect(source).toContain("\\u2028");
+  });
 });
 
 describe("html report", () => {

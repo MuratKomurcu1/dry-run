@@ -36,22 +36,22 @@ export function generateScenario(
   const model = [...interactions].reverse().find((i) => i.request.model)?.request.model ?? "";
 
   const lines: string[] = [];
-  lines.push(`import { defineAgent, MockProvider, autoCassette, scenario } from ${JSON.stringify(imp)};`);
+  lines.push(`import { defineAgent, MockProvider, autoCassette, scenario } from ${javascriptLiteral(imp)};`);
   lines.push("");
-  lines.push(`const provider = autoCassette(${JSON.stringify(opts.scenarioName)}, () => new MockProvider(${JSON.stringify(turns, null, 2)}));`);
+  lines.push(`const provider = autoCassette(${javascriptLiteral(opts.scenarioName)}, () => new MockProvider(${javascriptLiteral(turns, 2)}));`);
   lines.push("");
   if (toolDefs.length) {
-    lines.push(`const recordedToolResults = ${JSON.stringify(toolResults, null, 2)};`);
+    lines.push(`const recordedToolResults = ${javascriptLiteral(toolResults, 2)};`);
     lines.push("");
   }
   lines.push("const agent = defineAgent({");
   lines.push("  provider,");
-  if (model) lines.push(`  model: ${JSON.stringify(model)},`);
-  if (system) lines.push(`  system: ${JSON.stringify(system)},`);
+  if (model) lines.push(`  model: ${javascriptLiteral(model)},`);
+  if (system) lines.push(`  system: ${javascriptLiteral(system)},`);
   if (toolDefs.length) {
     lines.push("  tools: [");
     for (const t of toolDefs) {
-      lines.push(`    ${JSON.stringify(t)},`);
+      lines.push(`    ${javascriptLiteral(t)},`);
     }
     lines.push("  ],");
     lines.push("  execute: async () => {");
@@ -65,17 +65,17 @@ export function generateScenario(
   lines.push("");
   lines.push("export default [");
   lines.push("  scenario({");
-  lines.push(`    name: ${JSON.stringify(opts.scenarioName + " · generated from cassette")},`);
+  lines.push(`    name: ${javascriptLiteral(opts.scenarioName + " · generated from cassette")},`);
   lines.push("    agent,");
-  lines.push(`    input: ${JSON.stringify(input)},`);
+  lines.push(`    input: ${javascriptLiteral(input)},`);
   lines.push("    expect: [");
   for (const name of toolNames) {
     const count = turns.filter((t) => "call" in t && t.call === name).length;
-    lines.push(`      { type: "toolCalled", tool: ${JSON.stringify(name)}, times: ${count} },`);
+    lines.push(`      { type: "toolCalled", tool: ${javascriptLiteral(name)}, times: ${count} },`);
   }
   if (output) {
     const fragment = pickFragment(output);
-    lines.push(`      { type: "outputContains", value: ${JSON.stringify(fragment)} },`);
+    lines.push(`      { type: "outputContains", value: ${javascriptLiteral(fragment)} },`);
   }
   lines.push(`      { type: "maxSteps", count: ${totalSteps} },`);
   lines.push("    ],");
@@ -84,6 +84,21 @@ export function generateScenario(
   lines.push("");
 
   return lines.join("\n");
+}
+
+const JAVASCRIPT_UNSAFE_CHARACTERS: Record<string, string> = {
+  "<": "\\u003C",
+  ">": "\\u003E",
+  "&": "\\u0026",
+  "/": "\\u002F",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029",
+};
+
+function javascriptLiteral(value: unknown, space?: number): string {
+  const encoded = JSON.stringify(value, null, space);
+  if (encoded == null) throw new Error("Generated scenario contains a value that cannot be serialized");
+  return encoded.replace(/[<>&\/\u2028\u2029]/g, (character) => JAVASCRIPT_UNSAFE_CHARACTERS[character]);
 }
 
 function collectToolResults(interactions: Interaction[]): Array<{ result?: unknown; error?: string }> {
